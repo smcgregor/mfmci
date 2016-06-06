@@ -21,7 +21,8 @@ def test_initialization():
     assert len(mfmci.distance_metric) == 1
     assert len(mfmci.distance_metric[0])
 
-    assert type(mfmci.tree) == sklearn.neighbors.ball_tree.BinaryTree, "Type: {}".format(type(mfmci.tree))
+    assert type(mfmci.tree) == sklearn.neighbors.ball_tree.BinaryTree or \
+        type(mfmci.tree) == sklearn.neighbors.ball_tree.BallTree, "Type: {}".format(type(mfmci.tree))
 
     assert len(mfmci.database) == 2
     for transition_set in mfmci.database:
@@ -36,7 +37,8 @@ def test_ball_tree_queries():
     Test the initialization of the testing domain without creating trajectories.
     """
     mfmci = MFMCi("testing")
-    assert type(mfmci.tree) == sklearn.neighbors.ball_tree.BinaryTree, "Type: {}".format(type(mfmci.tree))
+    assert type(mfmci.tree) == sklearn.neighbors.ball_tree.BinaryTree or \
+        type(mfmci.tree) == sklearn.neighbors.ball_tree.BallTree, "Type: {}".format(type(mfmci.tree))
     mfmci.trajectory_set_counter += 1
     transition_set, distance = mfmci._get_closest_transition_set([10])
     assert transition_set[0] == 1.0, "transition_set[0] was {}".format(transition_set[0])
