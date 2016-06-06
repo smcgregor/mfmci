@@ -14,8 +14,8 @@ import os.path
 import pickle
 import csv
 import math
-import bisect
 import importlib
+import bz2
 from MFMCiPackage.TransitionTuple import TransitionTuple
 
 __copyright__ = "Copyright 2016, Sean McGregor"
@@ -35,6 +35,11 @@ class MFMCi():
         :param domain_name: The name of the domain as given in the databases folder
         """
         self.domain_name = domain_name
+        self.database_filename = "databases/" + self.domain_name + "/database.csv"
+        self.database_opener = open
+        if not os.path.isfile(self.database_filename):
+            self.database_filename += ".bz2"
+            self.database_opener = bz2.BZ2File
 
         annotate_module = importlib.import_module("databases." + domain_name + ".annotate")
         self.PRE_TRANSITION_VARIABLES = annotate_module.PRE_TRANSITION_VARIABLES
@@ -82,8 +87,7 @@ class MFMCi():
         variances_filename = "databases/" + self.domain_name + "/variances.pkl"
         if not os.path.isfile(variances_filename):
             f = open(variances_filename, "w")
-            database_filename = "databases/" + self.domain_name + "/database.csv"  # todo: handle compressed case
-            variances = MFMCi.find_variances(database_filename)
+            variances = MFMCi.find_variances(self.database_filename, self.database_opener)
             pickle.dump(variances, f)
             f.close()
         f = open(variances_filename, "rb")
@@ -165,8 +169,7 @@ class MFMCi():
         self.database = []
         self.column_names = []
         self.init_state_tuples = []
-        database_filename = "databases/" + self.domain_name + "/database.csv"  # todo: handle compressed case
-        with open(database_filename, 'rb') as csv_file:
+        with self.database_opener(self.database_filename, 'rb') as csv_file:
             transitions = csv.reader(csv_file, delimiter=',')
             row = transitions.next()
             header = []
@@ -201,10 +204,14 @@ class MFMCi():
                     state_summary_variable_index = header.index(variable)
                     state_summary[variable] = parsed_row[state_summary_variable_index]
                 terminal = False  # no states are terminal
-                if "year" in additional_state:
-                    is_initial = (additional_state["year"] == 0)
-                else:
-                    is_initial = (additional_state["time step"] == 0)
+                if "year" in additional_state: # hack for wildfire
+                    additional_state["time step"] = additional_state["year"]
+                    additional_state["trajectory identifier"] = "{}"\
+                        .format(additional_state["initialFire"])
+                    additional_state["policy identifier"] = "{}-{}" \
+                        .format(additional_state["policyThresholdERC"],
+                                additional_state["policyThresholdDays"])
+                is_initial = (additional_state["time step"] == 0)
                 assert len(state) == len(ns)
                 insort_merge(state, ns, state_summary, additional_state, is_initial, terminal)
 
@@ -314,15 +321,16 @@ class MFMCi():
         return self.terminal
 
     @staticmethod
-    def find_variances(database_filename):
+    def find_variances(database_filename, opener):
         """
         Find the variances of database.
         E(x^2) - E(x)^2
         :param database_filename: The file name of the database we are finding the variances for.
+        :param opener: The function that will read the database. This will either be `open` or bz2's open.
         :return: The variance.
         """
 
-        with open(database_filename, 'rb') as csv_file:
+        with opener(database_filename, 'rb') as csv_file:
             transitions = csv.reader(csv_file, delimiter=',')
             row = transitions.next()
             header = []
