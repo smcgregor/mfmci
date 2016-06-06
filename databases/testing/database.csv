@@ -1,0 +1,5 @@
+one start, one end, action, reward, policy identifier, time step, trajectory identifier, on policy,
+0,1,0,0,policy0,0,0,1,
+0,1,1,0,policy0,0,0,0,
+1,2,0,0,policy0,1,0,1,
+1,2,1,0,policy0,1,0,0,

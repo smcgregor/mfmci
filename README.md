@@ -67,11 +67,15 @@ Details of this effect is included in an (under review) research paper.
 
 For an example of the database format, you can view the files in the databases folder.
 Databases should either be named `database.csv`, or `database.csv.bz2`. When there is no
-file `database.csv` file mfmci will attempt to decompress the bz2 compressed file.
+`database.csv` file, mfmci will attempt to decompress a bz2 compressed file.
 
 Each row of the database should include all the variables necessary for evaluating
 state transitions, including the starting state variables, result state variables,
 and any variables that you may need to evaluate the policy or generate a visualization.
+
+Three required columns are `action`, `onPolicy`, and `timeStep`, which give an integer values for the evaluated action,
+an indicator that the transition is on the sampling policy (or not), and a counter of the time step in which
+the transition was generated.
 
 Additionally, you must annotate the columns of the database so mfmci will know
 how to use them.
@@ -107,6 +111,14 @@ setting the parameters of the policies.
 
 We recommend you copy one of the existing policy classes from the databases
 folder (e.g. `databases/wildfire/policies.py`) and update it to suit your needs.
+
+## (Optional) Specify a Distance Metric
+
+Currently all distance metrics use Euclidean distance normalized by the inverse variance of the
+variable used in the distance metric. To allow experimentation with different distance metrics,
+we process the database the first time it is loaded to find the variance of all the numeric variables.
+You cannot currently include actions in the distance metric. If you want support for actions, please
+open an issue on the repository.
 
 # Testing and Contributing
 
