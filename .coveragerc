@@ -36,7 +36,7 @@ omit =
     multiprocessing/*
     numbers.py
     pydoc.py
-    PIL/*
+    *PIL*
 
 ignore_errors = True
 
