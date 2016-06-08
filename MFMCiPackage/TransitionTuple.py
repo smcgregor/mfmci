@@ -43,7 +43,7 @@ class TransitionTuple(tuple):
         transitions defined for each available actions.
         :return:
         """
-        for action in self.possibleActions:
+        for action in self.possible_actions:
             if action not in self.results:
                 return False
         return True
@@ -54,6 +54,7 @@ class TransitionTuple(tuple):
         :return: The result state object.
         """
         return self.results[action]
+
 
     @staticmethod
     def less_than(tuple_1, tuple_2_time_step, tuple_2_trajectory_identifier, tuple_2_policy_identifier):
@@ -68,10 +69,16 @@ class TransitionTuple(tuple):
         tuple_1_result_set_additional_variables = tuple_1.results[tuple_1.results.keys()[0]]["additional variables"]
         if tuple_1_result_set_additional_variables["time step"] < tuple_2_time_step:
             return True
+        elif tuple_1_result_set_additional_variables["time step"] > tuple_2_time_step:
+            return False
         elif tuple_1_result_set_additional_variables["trajectory identifier"] < tuple_2_trajectory_identifier:
             return True
+        elif tuple_1_result_set_additional_variables["trajectory identifier"] > tuple_2_trajectory_identifier:
+            return False
         elif tuple_1_result_set_additional_variables["policy identifier"] < tuple_2_policy_identifier:
             return True
+        elif tuple_1_result_set_additional_variables["policy identifier"] > tuple_2_policy_identifier:
+            return False
         return False
 
     @staticmethod

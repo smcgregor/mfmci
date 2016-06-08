@@ -46,6 +46,12 @@ class MFMCi():
         self.POST_TRANSITION_VARIABLES = annotate_module.POST_TRANSITION_VARIABLES
         self.STATE_SUMMARY_VARIABLES = annotate_module.STATE_SUMMARY_VARIABLES
         self.POSSIBLE_ACTIONS = annotate_module.POSSIBLE_ACTIONS
+        try:
+            self.PROCESS_ROW = annotate_module.PROCESS_ROW
+        except AttributeError:
+            def PROCESS_ROW(x):
+                pass
+            self.PROCESS_ROW = PROCESS_ROW
 
         self.database = []
         self.initial_state_tuples = []
@@ -102,6 +108,59 @@ class MFMCi():
             met[idx][idx] = 1.0/variance
         self.distance_metric = np.array(met)
 
+    def _insort_merge(self, state, ns, state_summary, additional_state, is_initial, terminal):
+        """Insert the values into the database, and keep it sorted assuming it is already sorted.
+
+        If the values are already in the database, add them to the existing tuple.
+
+        todo: refactor this
+        """
+        tuple_2_time_step = additional_state["time step"]
+        tuple_2_trajectory_identifier = additional_state["trajectory identifier"]
+        tuple_2_policy_identifier = additional_state["policy identifier"]
+
+        lo = 0
+        hi = len(self.database) - 1
+        database_empty = len(self.database) < 1
+
+        if not database_empty:
+            while lo < hi:
+                mid = (lo+hi)//2
+                if TransitionTuple.less_than(self.database[mid],
+                                             tuple_2_time_step,
+                                             tuple_2_trajectory_identifier,
+                                             tuple_2_policy_identifier):
+                    lo = mid+1
+                else:
+                    hi = mid
+
+        # Add a result to an existing Transition Set, else create and insert a new one
+        if not database_empty and TransitionTuple.eq(self.database[lo],
+                                                     tuple_2_time_step,
+                                                     tuple_2_trajectory_identifier,
+                                                     tuple_2_policy_identifier):
+            self.database[lo].add_action_result(additional_state["action"],
+                                                ns,
+                                                state_summary,
+                                                additional_state)
+        else:
+            t = TransitionTuple(state, terminal, is_initial, self.POSSIBLE_ACTIONS)
+            t.add_action_result(additional_state["action"],
+                                ns,
+                                state_summary,
+                                additional_state)
+
+            # The loop above terminates
+            if lo < len(self.database) and TransitionTuple.less_than(self.database[lo],
+                                         tuple_2_time_step,
+                                         tuple_2_trajectory_identifier,
+                                         tuple_2_policy_identifier):
+                self.database.insert(lo + 1, t)
+            else:
+                self.database.insert(lo, t)
+            if t.is_initial:
+                self.init_state_tuples.append(t)
+
     def _populate_database(self):
         """
         Load transitions into the database from the selected domain's database.
@@ -117,67 +176,15 @@ class MFMCi():
             except ValueError:
                 return r
 
-        def insort_merge(state, ns, state_summary, additional_state, is_initial, terminal):
-            """Insert TransitionTuple X into list a, and keep it sorted assuming a is sorted.
-
-            If x is already in a, insert it to the left of the leftmost x.
-            """
-
-            tuple_2_time_step = additional_state["time step"]
-            tuple_2_trajectory_identifier = additional_state["trajectory identifier"]
-            tuple_2_policy_identifier = additional_state["policy identifier"]
-
-            lo = 0
-            hi = len(self.database) - 1
-            database_empty = len(self.database) < 1
-
-            if not database_empty:
-                while lo < hi:
-                    mid = (lo+hi)//2
-                    if TransitionTuple.less_than(self.database[mid],
-                                                 tuple_2_time_step,
-                                                 tuple_2_trajectory_identifier,
-                                                 tuple_2_policy_identifier):
-                        lo = mid+1
-                    else:
-                        hi = mid
-
-            # Add a result to an existing Transition Set, else create and insert a new one
-            if not database_empty and TransitionTuple.eq(self.database[lo],
-                                                         tuple_2_time_step,
-                                                         tuple_2_trajectory_identifier,
-                                                         tuple_2_policy_identifier):
-                self.database[lo].add_action_result(additional_state["action"],
-                                                    ns,
-                                                    state_summary,
-                                                    additional_state)
-            else:
-                t = TransitionTuple(
-                    state,
-                    terminal,
-                    is_initial,
-                    self.POSSIBLE_ACTIONS
-                )
-                t.add_action_result(additional_state["action"],
-                                    ns,
-                                    state_summary,
-                                    additional_state)
-                self.database.insert(lo, t)
-                if t.is_initial:
-                    self.init_state_tuples.append(t)
-
         self.database = []
         self.column_names = []
         self.init_state_tuples = []
         with self.database_opener(self.database_filename, 'rb') as csv_file:
             transitions = csv.reader(csv_file, delimiter=',')
             row = transitions.next()
-            header = []
             for headerValue in row:
                 if headerValue:
                     self.column_names.append(headerValue.strip())
-                    header.append(headerValue.strip())
-
             for row in transitions:
                 #del row[-1] # todo: remove?
                 parsed_row = map(parse_value, row)
@@ -185,35 +192,26 @@ class MFMCi():
                 ns = []
                 state_summary = {}
                 additional_state = {}
-                for idx, header_value in enumerate(header):
+                for idx, header_value in enumerate(self.column_names):
                     if header_value not in self.PRE_TRANSITION_VARIABLES \
                             and header_value not in self.POST_TRANSITION_VARIABLES \
                             and header_value not in self.STATE_SUMMARY_VARIABLES:
                         additional_state[header_value] = parsed_row[idx]
-                additional_state["action"] = parsed_row[header.index("action")]
-                if "lcpFileName" in additional_state:
-                    additional_state["on policy"] = ("onPolicy" in additional_state["lcpFileName"])
-                else:
-                    additional_state["on policy"] = (int(additional_state["on policy"]) == 1)
+                additional_state["action"] = parsed_row[self.column_names.index("action")]
+                self.PROCESS_ROW(additional_state)
+                additional_state["on policy"] = (int(additional_state["on policy"]) == 1)
                 for stitchingVariableIdx, variable in enumerate(self.PRE_TRANSITION_VARIABLES):
-                    state_index = header.index(variable)
+                    state_index = self.column_names.index(variable)
                     state.append(parsed_row[state_index])
-                    ns_index = header.index(self.POST_TRANSITION_VARIABLES[stitchingVariableIdx])
+                    ns_index = self.column_names.index(self.POST_TRANSITION_VARIABLES[stitchingVariableIdx])
                     ns.append(parsed_row[ns_index])
                 for variable in self.STATE_SUMMARY_VARIABLES:
-                    state_summary_variable_index = header.index(variable)
+                    state_summary_variable_index = self.column_names.index(variable)
                     state_summary[variable] = parsed_row[state_summary_variable_index]
-                terminal = False  # no states are terminal
-                if "year" in additional_state: # hack for wildfire
-                    additional_state["time step"] = additional_state["year"]
-                    additional_state["trajectory identifier"] = "{}"\
-                        .format(additional_state["initialFire"])
-                    additional_state["policy identifier"] = "{}-{}" \
-                        .format(additional_state["policyThresholdERC"],
-                                additional_state["policyThresholdDays"])
+                is_terminal = False  # no states are terminal
                 is_initial = (additional_state["time step"] == 0)
                 assert len(state) == len(ns)
-                insort_merge(state, ns, state_summary, additional_state, is_initial, terminal)
+                self._insort_merge(state, ns, state_summary, additional_state, is_initial, is_terminal)
 
     def _get_closest_transition_set(self, pre_transition_variables, k=1):
         """

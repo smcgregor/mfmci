@@ -5,6 +5,26 @@ from MFMCi import MFMCi
 import sklearn
 
 
+def test_insort_merge():
+    """
+    Test the insort merge function.
+    """
+    mfmci = MFMCi("testing")
+    count = 0
+    while count + 1 < len(mfmci.database):
+        tuple_1 = mfmci.database[count]
+        tuple_2 = mfmci.database[count + 1]
+        for key1, result1 in tuple_1.results.iteritems():
+            for key2, result2 in tuple_2.results.iteritems():
+                assert result1["additional variables"]["time step"] <= result2["additional variables"]["time step"],\
+                    "{} is not LEQ than {}".format(result1["additional variables"]["time step"], result2["additional variables"]["time step"])
+                if result1["additional variables"]["time step"] == result2["additional variables"]["time step"]:
+                    assert result1["additional variables"]["trajectory identifier"] <= result2["additional variables"]["trajectory identifier"]
+                    if result1["additional variables"]["trajectory identifier"] == result2["additional variables"]["trajectory identifier"]:
+                        assert result1["additional variables"]["policy identifier"] <= result2["additional variables"]["policy identifier"]
+        count += 1
+
+
 def test_initialization():
     """
     Test the initialization of the testing domain without creating trajectories.
@@ -34,7 +54,7 @@ def test_initialization():
 
 def test_ball_tree_queries():
     """
-    Test the initialization of the testing domain without creating trajectories.
+    Test the ball tree queries return the proper transition tuples.
     """
     mfmci = MFMCi("testing")
     assert type(mfmci.tree) == sklearn.neighbors.ball_tree.BinaryTree or \
@@ -57,7 +77,7 @@ def test_ball_tree_queries():
 
 def test_get_trajectories():
     """
-    Test the initialization of the testing domain without creating trajectories.
+    Test the construction of trajectories from the database.
     """
     def policy0(not_used):
         return 0
