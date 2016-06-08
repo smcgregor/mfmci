@@ -1,5 +1,7 @@
 # About
 
+[![Build Status](https://travis-ci.org/MDPvis/mfmci.svg?branch=master)](https://travis-ci.org/MDPvis/mfmci) [![Coverage Status](https://coveralls.io/repos/github/MDPvis/mfmci/badge.svg?branch=travisci)](https://coveralls.io/github/MDPvis/mfmci?branch=travisci)
+
 This repository implements
 [Model Free Monte Carlo](http://www.jmlr.org/proceedings/papers/v9/fonteneau10a/fonteneau10a.pdf)
 (MFMC),

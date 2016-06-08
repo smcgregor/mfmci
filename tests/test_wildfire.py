@@ -3,6 +3,7 @@ Test the wildfire domain, which is a large database with many columns.
 """
 from MFMCi import MFMCi
 import csv
+import bz2
 
 
 def test_tuple_equality():
@@ -83,7 +84,8 @@ def test_check_csv():
     initialFireIndex = 40
     policyThresholdERCIndex = 58
     policyThresholdDaysIndex = 59
-    with open("databases/wildfire/database.csv", 'rb') as csv_file:
+
+    with bz2.BZ2File("databases/wildfire/database.csv.bz2", 'rb') as csv_file:
         transitions = csv.reader(csv_file, delimiter=',')
         transitions.next() # discard header
         count = 0.0
