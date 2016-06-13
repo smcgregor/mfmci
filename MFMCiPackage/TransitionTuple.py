@@ -55,6 +55,13 @@ class TransitionTuple(tuple):
         """
         return self.results[action]
 
+    def get_additional_state(self):
+        """
+        Get the additional state associated with the first entry in the result dictionary. This function is
+        provided to simplify evaluation of the policy.
+        :return: The additional state variables associated with the first action..
+        """
+        return self.results[self.possible_actions[0]]["additional variables"]
 
     @staticmethod
     def less_than(tuple_1, tuple_2_time_step, tuple_2_trajectory_identifier, tuple_2_policy_identifier):

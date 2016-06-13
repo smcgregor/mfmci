@@ -244,6 +244,8 @@ class MFMCi():
         :param policy: The function used to select an action.
         :return:
         """
+        assert policy is not None
+
         self.trajectory_set_counter += 1
 
         self.totalStitchingDistance = 0
@@ -272,6 +274,18 @@ class MFMCi():
             trajectories.append(trajectory)
         print "Returning trajectories with {} " \
               "lossy stitched transitions for {} total transitions".format(self.totalNonZeroStitches, total_transitions)
+        return trajectories
+
+    def get_visualization_trajectories(self, count=10, horizon=10, policy=None):
+        """
+        Helper function for getting trajectories and formatting them for MDPvis.
+        :param count: The number of trajectories to generate.
+        :param horizon: The maximum length of trajectories.
+        :param policy: The function used to select an action.
+        :return:
+        """
+        assert policy is not None
+        trajectories = self.get_trajectories(count=count, horizon=horizon, policy=policy)
         return trajectories
 
     def step(self, policy):

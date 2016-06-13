@@ -59,3 +59,84 @@ def PROCESS_ROW(additional_state):
     additional_state["trajectory identifier"] = additional_state["initialFire"]
     additional_state["policy identifier"] = "{}-{}" \
         .format(additional_state["policyThresholdERC"], additional_state["policyThresholdDays"])
+
+# The initialization object for MDPvis
+mdpvis_initialization_object = {
+
+    # The settings to apply at initialization time
+    "mdpvis_settings": {
+        "domain_instructions": "todo",
+        "domain_cover_image": "todo",
+        "saved states": [
+            {
+                "description": "A set of interesting queries",
+                "href": "todo"
+            }
+        ]
+    },
+
+    # The control panels that appear at the top of the screen
+    "parameter_collections": [
+        {
+            "panel_title": "Policy",
+            "panel_icon": "glyphicon-random",
+            "panel_description": "Define the parameters of the policies used to generate trajectories.",
+            "default_rendering": "radar", # Default to a radar plot. User can switch to input elements.
+            "quantitative": [  # Real valued parameters
+                {
+                    "name": "ERC Threshold",
+                    "description": "Values of Energy Release Component greater than " +
+                                   "this parameter will be suppressed (up to the value of 95)",
+                    "current_value": 0,
+                    "max": 95,
+                    "min": 0,
+                    "step": 1,
+                    "units": "Unitless"
+                },
+                {
+                    "name": "Days Until End of Season Threshold",
+                    "description": "Values of Ignition Day less than this parameter will " +
+                                   "be suppressed if the ERC parameter is in the suppressable range",
+                    "current_value": 0,
+                    "max": 180,
+                    "min": 0,
+                    "step": 1,
+                    "units": "Days"
+                }
+            ],
+            "categorical": [  # Discrete valued parameters, uses drop down or radar buttons for selection
+                              {"Policy Class": ["severity", "location"]}
+            ]
+        },
+        {
+            "panel_title": "Sampling Effort",
+            "panel_icon": "glyphicon-retweet",
+            "panel_description": "Define how many trajectories you want to generate, and to what time horizon.",
+            "default_rendering": "radar", # Default to a radar plot. User can switch to input elements.
+            "quantitative": [  # Real valued parameters
+                               {
+                                   "name": "Sample Count",
+                                   "description": "Specify how many trajectories to generate",
+                                   "current_value": 10,
+                                   "max": 1000,
+                                   "min": 1,
+                                   "step": 1,
+                                   "units": "#"
+                               },
+                               {
+                                   "name": "Horizon",
+                                   "description": "The time step at which simulation terminates",
+                                   "current_value": 10,
+                                   "max": 100,
+                                   "min": 1,
+                                   "step": 1,
+                                   "units": "Years"
+                               }
+            ],
+            "categorical": [  # Discrete valued parameters, uses drop down or radar buttons for selection
+                              {"Policy Class": ["severity", "location"]}
+            ]
+        }
+    ]
+
+}
