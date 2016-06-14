@@ -10,6 +10,7 @@ from flask import Flask, jsonify, request
 from flask.ext.cors import cross_origin
 from MFMCi import MFMCi
 import importlib
+import subprocess
 
 print """
 Starting Flask Server...
@@ -88,6 +89,46 @@ def cross_origin_trajectories():
     ))
     json_obj = {"trajectories": trajectories}
     resp = jsonify(json_obj)
+    return resp
+
+@app.route("/optimize", methods=['POST','GET'])
+@cross_origin(allow_headers=['Content-Type'])
+def cross_origin_optimize():
+    '''
+        Asks the domain to optimize the policy using SMAC.
+        todo: this doesn't gracefully handle all parameters. It is more a proof of concept.
+        todo: generalize to all possible parameters
+        todo: plug all non-policy parameters into smac.py
+    '''
+    count = int(request.args["Sample Count"])
+    horizon = int(request.args["Horizon"])
+    erc_threshold = int(request.args["ERC Threshold"])
+    days_threshold = int(request.args["Days Until End of Season Threshold"])
+
+    # Write SMAC's parameter file
+    f = open("databases/wildfire/smac.pcs", "w")
+    f.write("erc integer [0,95] [{}]\n".format(erc_threshold))
+    f.write("days integer [0,180] [{}]\n".format(days_threshold))
+    f.close()
+
+    subprocess.call(['./smac/smac --use-instances false --numberOfRunsLimit 5 --pcs-file databases/wildfire/smac.pcs --algo "python smac.py" --run-objective QUALITY --rungroup optimizations --seed 1'], shell=True)
+
+    f = open("smac-output/optimizations/state-run1/paramstrings-it1.txt", "r")
+    last_line = ""
+    for line in f:
+        last_line = line
+    f.close()
+
+    # 5: days='56', erc='17'
+    params = {}
+    for param in last_line[last_line.index(" ")+1:].split(" "):
+        parts = param.split("=")
+        params[parts[0]] = int(parts[1].strip("',").strip("',\n"))
+    ret_params = {
+        "ERC Threshold": params["erc"],
+        "Days Until End of Season Threshold": params["days"],
+    }
+    resp = jsonify(ret_params)
     return resp
 
 # Binds the server to port 8938 and listens to all IP addresses.

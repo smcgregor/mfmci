@@ -36,7 +36,20 @@ STATE_SUMMARY_VARIABLES = [
     "boardFeetHarvestTotal",
     "boardFeetHarvestPonderosa",
     "boardFeetHarvestLodgepole",
-    "boardFeetHarvestMixedConifer"
+    "boardFeetHarvestMixedConifer",
+    "ponderosaSC1",
+    "ponderosaSC2",
+    "ponderosaSC3",
+    "ponderosaSC4",
+    "ponderosaSC5",
+    "mixedConSC1",
+    "mixedConSC2",
+    "mixedConSC3",
+    "mixedConSC4",
+    "mixedConSC5",
+    "lodgepoleSC1",
+    "lodgepoleSC2",
+    "lodgepoleSC3"
 ]
 
 # All the actions that are possible
