@@ -6,19 +6,27 @@ This is a minimal server for using MFMCi to serve your domain.
 :copyright: (C) 2016 by Sean McGregor.
 :license:   MIT, see LICENSE for more details.
 """
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask.ext.cors import cross_origin
 from MFMCi import MFMCi
 import importlib
 import subprocess
+import os
+import argparse
 
 print """
 Starting Flask Server...
 Note, you may be able to specify a domain at this point by adding it as a
-positional argument. (todo)
+positional argument. For examples: `python flask_server.py wildfire`.
 """
 
-domain_name = "wildfire" # todo: use argparse
+parser = argparse.ArgumentParser(description='Start the MFMCi server.')
+parser.add_argument('domain', metavar='D', type=str, nargs='?',
+                    help='the domain to synthesize trajectories for',
+                    default='wildfire')
+args = vars(parser.parse_args())
+
+domain_name = args["domain"]
 mfmci = MFMCi(domain_name)
 policy_module = importlib.import_module("databases." + domain_name + ".policies")
 policy_factory = policy_module.policy_factory
@@ -77,16 +85,11 @@ def cross_origin_trajectories():
     '''
     count = int(request.args["Sample Count"])
     horizon = int(request.args["Horizon"])
-    erc_threshold = int(request.args["ERC Threshold"])
-    days_threshold = int(request.args["Days Until End of Season Threshold"])
 
     trajectories = mfmci.get_visualization_trajectories(
         count=count, horizon=horizon,
-        policy=policy_factory({
-            "erc_threshold": erc_threshold,
-            "time_until_end_of_fire_season_threshold": days_threshold
-        }
-    ))
+        policy=policy_factory(request.args)
+    )
     json_obj = {"trajectories": trajectories}
     resp = jsonify(json_obj)
     return resp
@@ -96,40 +99,47 @@ def cross_origin_trajectories():
 def cross_origin_optimize():
     '''
         Asks the domain to optimize the policy using SMAC.
-        todo: this doesn't gracefully handle all parameters. It is more a proof of concept.
-        todo: generalize to all possible parameters
-        todo: plug all non-policy parameters into smac.py
     '''
     count = int(request.args["Sample Count"])
     horizon = int(request.args["Horizon"])
-    erc_threshold = int(request.args["ERC Threshold"])
-    days_threshold = int(request.args["Days Until End of Season Threshold"])
+    runs_limit = int(request.args["Number of Runs Limit"])
 
-    # Write SMAC's parameter file
-    f = open("databases/wildfire/smac.pcs", "w")
-    f.write("erc integer [0,95] [{}]\n".format(erc_threshold))
-    f.write("days integer [0,180] [{}]\n".format(days_threshold))
-    f.close()
+    annotations.write_smac_parameters(request.args)
+    subprocess.call(
+        ['./smac/smac --use-instances false --numberOfRunsLimit ' + str(runs_limit) + ' --pcs-file smac.pcs --algo "python smac.py -domain ' + domain_name + ' -count ' + str(count) + ' -horizon ' + str(horizon) + '" --run-objective QUALITY --rungroup optimizations --seed 1'],
+        shell=True)
 
-    subprocess.call(['./smac/smac --use-instances false --numberOfRunsLimit 5 --pcs-file databases/wildfire/smac.pcs --algo "python smac.py" --run-objective QUALITY --rungroup optimizations --seed 1'], shell=True)
-
-    f = open("smac-output/optimizations/state-run1/paramstrings-it1.txt", "r")
+    directory_listing = os.listdir("smac-output/optimizations/state-run1/")
+    out_file = ""
+    for file_name in directory_listing:
+        if file_name.find("paramstrings-it") == 0:
+            out_file = file_name
+            break
+    f = open("smac-output/optimizations/state-run1/" + out_file, "r")
     last_line = ""
     for line in f:
         last_line = line
     f.close()
 
+    # Example last line of file:
     # 5: days='56', erc='17'
     params = {}
     for param in last_line[last_line.index(" ")+1:].split(" "):
         parts = param.split("=")
         params[parts[0]] = int(parts[1].strip("',").strip("',\n"))
-    ret_params = {
-        "ERC Threshold": params["erc"],
-        "Days Until End of Season Threshold": params["days"],
-    }
-    resp = jsonify(ret_params)
+
+    resp = jsonify(annotations.post_process_smac_output(params))
     return resp
+
+@app.route("/state", methods=['POST','GET'])
+@cross_origin(allow_headers=['Content-Type'])
+def cross_origin_state():
+    '''
+        Asks for the image of a particular state.
+    '''
+    image_file_name = request.args["image"]
+    print "sending %s" % image_file_name
+    return send_file(annotations.get_image(image_file_name), mimetype='image/jpeg')
 
 # Binds the server to port 8938 and listens to all IP addresses.
 if __name__ == "__main__":

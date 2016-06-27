@@ -9,9 +9,8 @@ def policy_factory(parameter_dictionary):
     :param parameter_dictionary: A dictionary containing the parameters expected by the policy.
     :return: A function mapping transition tuples to actions
     """
-
-    erc_threshold = parameter_dictionary["erc_threshold"]
-    time_until_end_of_fire_season_threshold = parameter_dictionary["time_until_end_of_fire_season_threshold"]
+    erc_threshold = int(parameter_dictionary["ERC Threshold"])
+    time_until_end_of_fire_season_threshold = int(parameter_dictionary["Days Until End of Season Threshold"])
 
     def policy_severity(
             transition_tuple=None,

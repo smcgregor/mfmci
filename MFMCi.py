@@ -270,6 +270,7 @@ class MFMCi():
                 assert state_summary["action"] >= 0
                 for label in ns.keys():
                     state_summary[label] = ns[label]
+                state_summary["image row"] = self.post_action_result["additional variables"]["image row"]
                 trajectory.append(state_summary)
             trajectories.append(trajectory)
         print "Returning trajectories with {} " \
@@ -305,7 +306,7 @@ class MFMCi():
         post_stitch_transition_set.last_accessed_iteration = self.trajectory_set_counter
         result = post_stitch_transition_set.get_action_result(action)
         self.lastEvaluatedAction = action
-        self.preStateDistanceMetricVariables = result
+        self.post_action_result = result
         self.terminal = post_stitch_transition_set.is_terminal
         self.state_summary = result["state summary variables"]
 
