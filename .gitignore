@@ -64,3 +64,10 @@ target/
 # Project Specific
 databases/testing/variances.pkl
 *.pcs
+databases/wildfire/database.csv
+databases/wildfire/variances.pkl
+*.DS_Store
+smac-output
+mfmci.iml
+*warning_many_files*
+.idea
