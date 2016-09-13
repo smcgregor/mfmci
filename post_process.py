@@ -7,7 +7,7 @@ import bz2
 import random
 import re
 import csv
-
+import array
 
 def lcpStateSummary(landscapeFileName):
     """
@@ -33,28 +33,20 @@ def lcpStateSummary(landscapeFileName):
     """
     distanceMetricVariableCount = 10
 
-    lcpFile = bz2.BZ2File(landscapeFileName, "r")
+    lcpFile = bz2.BZ2File(landscapeFileName, "rb")
     print "processing %s" % lcpFile
-    layers = []
-    for idx in range(0,distanceMetricVariableCount):
-        layers.append([])
-    layers.append([]) # hack because there is an extra layer
 
-    shortCount = 0 # 0 to 10,593,800
-    shortBytes = lcpFile.read(2)
-    while shortBytes != "":
-        pix = unpack("<h", shortBytes)
-        layers[shortCount % len(layers)].append(pix[0])
-        shortCount += 1
-        shortBytes = lcpFile.read(2)
+    a = array.array('h')
+    a.fromstring(lcpFile.read())
     lcpFile.close()
     highFuel = 0
     modFuel = 0
     lowFuel = 0
     summary = []
-    for layerIdx, layer in enumerate(layers):
+    for layerIdx in range(0,11):
         average = 0
-        for idx, pixel in enumerate(layers[layerIdx]):
+        for pixelIdx in range(0,len(a)/11):
+            pixel = a[pixelIdx*11 + layerIdx]
             if layerIdx == 0:
                 if pixel == 122 or pixel == 145:
                     highFuel += 1
@@ -62,9 +54,9 @@ def lcpStateSummary(landscapeFileName):
                     modFuel += 1
                 elif pixel == 142 or pixel == 161 or pixel == 187 or pixel == 184 or pixel == 185:
                     lowFuel += 1
-            average = float(average * idx + pixel)/(idx + 1.)
+            average = float(average * pixelIdx + pixel)/(pixelIdx + 1.)
         summary.append(average)
-    del summary[-1] # remove the last element because it is not needed
+    del summary[-1] # remove the last element because it is not needed                                                                                                                                                                    
     summary.append(highFuel)
     summary.append(modFuel)
     summary.append(lowFuel)
@@ -91,21 +83,23 @@ def test_post_process_landscapes():
             files.append(filename)
 
     print "processing {} files".format(len(files))
-    fileNum = int(100*random.random())
+    fileNum = int(len(files)*random.random())
     #fileNum = 0
+
+    files.sort()
     while fileNum < len(files):
         f = files[fileNum]
 
         print "processing {}".format(f)
         if os.path.isfile(resultsDirectory+f):
             print "skipping forward since this landscape is processed"
-            fileNum += int(200*random.random())
+            fileNum += int(500*random.random())
             continue
         try:
             s = lcpStateSummary(landscapeDirectory+f)
             if os.path.isfile(resultsDirectory+f):
                 print "skipping forward since this landscape is processed"
-                fileNum += int(200*random.random())
+                fileNum += int(500*random.random())
                 continue
             out = open(resultsDirectory+f, "wb")
             pickle.dump(s, out)
