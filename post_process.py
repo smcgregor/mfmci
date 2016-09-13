@@ -188,7 +188,7 @@ def process_database(database_input_path, database_output_path):
 
     # todo: this header does not appear to be correct
     # These are the variables in the output files as they are ordered in the raw output files.
-    # "initialFire, action, year, startIndex, endIndex, ERC, SC, Precipitation, MaxTemperature, MinHumidity, WindDirection, WindSpeed, IgnitionCount, CrownFirePixels, SurfaceFirePixels, fireSuppressionCost, timberLoss_IJWF, lcpFileName, offPolicy, ignitionLocation, ignitionCovertype, ignitionAspect, ignitionSlope, ignitionFuelModel, averaageBF, ponderosaSC1, ponderosaSC2, ponderosaSC3, ponderosaSC4, ponderosaSC5, lodgepoleSC1, lodgepoleSC2, lodgepoleSC3, mixedConSC1, mixedConSC2, mixedConSC3, mixedConSC4, mixedConSC5, boardFeetHarvestTotal, boardFeetHarvestPonderosa, boardFeetHarvestLodgepole, boardFeetHarvestMixedConifer"
+    # "initialFire, action, year, startIndex, endIndex, ERC, SC, Precipitation, MaxTemperature, MinHumidity, WindDirection, WindSpeed, IgnitionCount, CrownFirePixels, SurfaceFirePixels, fireSuppressionCost, timberLoss_IJWF, lcpFileName, offOnPolicy, ignitionLocation, ignitionCovertype, ignitionAspect, ignitionSlope, ignitionFuelModel, ponderosaSC1, ponderosaSC2, ponderosaSC3, ponderosaSC4, ponderosaSC5, lodgepoleSC1, lodgepoleSC2, lodgepoleSC3, mixedConSC1, mixedConSC2, mixedConSC3, mixedConSC4, mixedConSC5, boardFeetHarvestTotal, boardFeetHarvestPonderosa, boardFeetHarvestLodgepole, boardFeetHarvestMixedConifer"
     raw_header = [
         "initialFire",
         "action",
@@ -214,7 +214,6 @@ def process_database(database_input_path, database_output_path):
         "ignitionAspect",
         "ignitionSlope",
         "ignitionFuelModel",
-        "averaageBF",
         "ponderosaSC1",
         "ponderosaSC2",
         "ponderosaSC3",
@@ -267,7 +266,6 @@ def process_database(database_input_path, database_output_path):
             # Get the current transition's lcp summary, or the initial states if it is year 0
             if year == 0:
                 current_lcp_summary = initial_landscape_description
-                assert False
             else:
                 current_lcp_summary = get_landscape_summary(transitions[idx - 2]["lcpFileName"])
 
