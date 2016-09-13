@@ -115,20 +115,23 @@ def test_check_for_incomplete_pickles():
     """
     Open all the landscape pickles and check that they are properly formatted. Print the pickles that are not well formatted.
     """
-    resultsDirectory = "/scratch/mcgregse/aaai/landscape_summaries/"
-    files = os.listdir(resultsDirectory)
-    fileNum = 0
-    while fileNum < len(files):
-        f = open(resultsDirectory + files[fileNum],"rb")
-        try:
-            arr = pickle.load(f)
-            assert arr[0] >= 0
-            assert arr[1] >= 0
-            assert arr[2] >= 0
-        except Exception as inst:
-            print files[fileNum]
-        f.close()
-        fileNum += 1
+    resultsDirectories = ["/nfs/eecs-fserv/share/mcgregse/landscape_summaries/",
+                          "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_fuel/",
+                          "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_split/"]
+    for resultsDirectory in resultsDirectories:
+        files = os.listdir(resultsDirectory)
+        fileNum = 0
+        while fileNum < len(files):
+            f = open(resultsDirectory + files[fileNum],"rb")
+            try:
+                arr = pickle.load(f)
+                assert arr[0] >= 0
+                assert arr[1] >= 0
+                assert arr[2] >= 0
+            except Exception as inst:
+                print files[fileNum]
+            f.close()
+            fileNum += 1
 
 def process_database(database_input_path, database_output_path):
 
@@ -238,11 +241,19 @@ def process_database(database_input_path, database_output_path):
 
     def get_landscape_summary(path):
         lcp_name = path.split("/")[-1] + ".bz2"
-        if os.path.isfile(lcp_name):
-            f = open(lcp_name, "rb")
+        lcp_path = "/nfs/eecs-fserv/share/mcgregse/landscape_summaries/" + lcp_name
+
+        if lcp_name == "lcp_1_1_1_50_100_offPolicy.lcp.bz2" or lcp_name == "lcp_1_1_1_70_60_offPolicy.lcp.bz2":
+            return initial_landscape_description # todo, remove this trajectory set
+
+        if os.path.isfile(lcp_path):
+            f = open(lcp_path, "rb")
             current_lcp_summary = pickle.load(f)
             f.close()
         else:
+            print "Landscape not found!"
+            print lcp_path
+            assert False
             return initial_landscape_description # todo: remove this, this is only here for testing the pipeline
         return current_lcp_summary
 
