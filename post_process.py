@@ -5,6 +5,9 @@ import pickle
 import nose.tools
 import bz2
 import random
+import re
+import csv
+
 
 def lcpStateSummary(landscapeFileName):
     """
@@ -132,3 +135,198 @@ def test_check_for_incomplete_pickles():
             print files[fileNum]
         f.close()
         fileNum += 1
+
+def process_database(database_input_path, database_output_path):
+
+    initial_landscape_description = [
+        130.011288678,
+        27.4871670222,
+        475.19681323,
+        29.6549113633,
+        5.17117748117,
+        57.4973352338,
+        24.5366554022,
+        25.8858577659,
+        263.886173989,
+        263.886173989,
+        138226,
+        18429,
+        643003,
+        0.1728563961
+    ]
+
+    # Each of these variables need a "start" value and an "end" value pulled from the subsequent state
+    ALL_STITCHING_VARIABLES_NAMES = [
+        "Fuel Model", # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
+        "Canopy Closure",
+        "Canopy Height",
+        "Canopy Base Height",
+        "Canopy Bulk Density",
+        "Covertype",
+        "Stand Density Index",
+        "Succession Class",
+        "Maximum Time in State",
+        "Stand Volume Age",
+        "highFuel",
+        "modFuel",
+        "lowFuel",
+        "percentHighFuel",
+        "Precipitation", # \/ pulled from the current row's state
+        "MaxTemperature",
+        "MinHumidity",
+        "WindDirection",
+        "WindSpeed",
+        "ignitionCovertype",
+        "ignitionSlope",
+        "ignitionLocation",
+        "ignitionAspect",
+        "ignitionFuelModel",
+        "startIndex",
+        "ERC",
+        "SC"
+    ]
+
+    # todo: this header does not appear to be correct
+    # These are the variables in the output files as they are ordered in the raw output files.
+    # "initialFire, action, year, startIndex, endIndex, ERC, SC, Precipitation, MaxTemperature, MinHumidity, WindDirection, WindSpeed, IgnitionCount, CrownFirePixels, SurfaceFirePixels, fireSuppressionCost, timberLoss_IJWF, lcpFileName, offPolicy, ignitionLocation, ignitionCovertype, ignitionAspect, ignitionSlope, ignitionFuelModel, averaageBF, ponderosaSC1, ponderosaSC2, ponderosaSC3, ponderosaSC4, ponderosaSC5, lodgepoleSC1, lodgepoleSC2, lodgepoleSC3, mixedConSC1, mixedConSC2, mixedConSC3, mixedConSC4, mixedConSC5, boardFeetHarvestTotal, boardFeetHarvestPonderosa, boardFeetHarvestLodgepole, boardFeetHarvestMixedConifer"
+    raw_header = [
+        "initialFire",
+        "action",
+        "year",
+        "startIndex",
+        "endIndex",
+        "ERC",
+        "SC",
+        "Precipitation",
+        "MaxTemperature",
+        "MinHumidity",
+        "WindDirection",
+        "WindSpeed",
+        "IgnitionCount",
+        "CrownFirePixels",
+        "SurfaceFirePixels",
+        "fireSuppressionCost",
+        "timberLoss_IJWF",
+        "lcpFileName",
+        "offPolicy",
+        "ignitionLocation",
+        "ignitionCovertype",
+        "ignitionAspect",
+        "ignitionSlope",
+        "ignitionFuelModel",
+        "averaageBF",
+        "ponderosaSC1",
+        "ponderosaSC2",
+        "ponderosaSC3",
+        "ponderosaSC4",
+        "ponderosaSC5",
+        "lodgepoleSC1",
+        "lodgepoleSC2",
+        "lodgepoleSC3",
+        "mixedConSC1",
+        "mixedConSC2",
+        "mixedConSC3",
+        "mixedConSC4",
+        "mixedConSC5",
+        "boardFeetHarvestTotal",
+        "boardFeetHarvestPonderosa",
+        "boardFeetHarvestLodgepole",
+        "boardFeetHarvestMixedConifer"
+    ]
+
+    out = file(database_output_path, "w")
+    for newVar in ALL_STITCHING_VARIABLES_NAMES:
+        out.write(newVar + " start,")
+    for newVar in ALL_STITCHING_VARIABLES_NAMES:
+        out.write(newVar + " end,")
+    for newVar in raw_header:
+        out.write(newVar + ",")
+    out.write("\n")
+
+    def get_landscape_summary(path):
+        lcp_name = path.split("/")[-1] + ".bz2"
+        if os.path.isfile(lcp_name):
+            f = open(lcp_name, "rb")
+            current_lcp_summary = pickle.load(f)
+            f.close()
+        else:
+            return initial_landscape_description # todo: remove this, this is only here for testing the pipeline
+        return current_lcp_summary
+
+    with open(database_input_path, 'rb') as csvfile:
+        transitionsReader = csv.DictReader(csvfile, fieldnames=raw_header)
+        transitions = list(transitionsReader)
+        for idx, transitionDictionary in enumerate(transitions):
+
+            year = int(transitionDictionary["year"])
+
+            # We can't render year 100 because there is no fire experienced at that year
+            if year == 99:
+                continue
+
+            # Get the current transition's lcp summary, or the initial states if it is year 0
+            if year == 0:
+                current_lcp_summary = initial_landscape_description
+                assert False
+            else:
+                current_lcp_summary = get_landscape_summary(transitions[idx - 2]["lcpFileName"])
+
+            # Write the lcp's summary to the "start" portion
+            for entry in current_lcp_summary:
+                out.write(str(entry) + ",")
+
+            # Write the "other" starting features
+            for name in ALL_STITCHING_VARIABLES_NAMES[14:]:
+                out.write(str(transitionDictionary[name]) + ",")
+
+            # Write the lcp's summary from transitions[idx]
+            current_lcp_summary = get_landscape_summary(transitionDictionary["lcpFileName"])
+            for entry in current_lcp_summary:
+                out.write(str(entry) + ",")
+
+            # Write the "other" ending features from transitions[idx + 2]
+            for name in ALL_STITCHING_VARIABLES_NAMES[14:]:
+                out.write(str(transitions[idx+2][name]) + ",")
+
+            # Write out the rest of the result file. Yes there will be duplicates
+            for k in raw_header:
+                cur = transitionDictionary[k]
+                if cur is None:
+                    cur = ""
+                else:
+                    cur = str(cur)
+                out.write(cur + ",")
+            out.write("\n")
+
+def test_process_raw_output():
+    """
+    Process all the raw output files into their own files without the surrounding whitespace
+    """
+    # Fuel policy
+    # estimatedpolicy-HIGH_FUEL_POLICY-i-[3-6][0-9].out
+    # Location policy
+    # estimatedpolicy-IGNITION_POLICY-i-[0-3][0-9]-erc-75-days-120.out
+    # Severity policy
+    # estimatedpolicy-SPLIT_LANDSCAPE_POLICY-i-[0-3][0-9].out
+    # database policy
+    # estimatedpolicy-IGNITION_POLICY-i-1-erc-*-days-*.out
+    """
+    pre-processing steps
+
+    grep CSVROWFORPARSER estimatedpolicy-HIGH_FUEL_POLICY-i-[3-6][0-9].out -h | sed 's/^.................//' > ../databases/fuel_raw_policy.csv
+
+    grep CSVROWFORPARSER estimatedpolicy-SPLIT_LANDSCAPE_POLICY-i-[0-3][0-9].out -h | sed 's/^.................//' > ../databases/location_raw_policy.csv
+
+    grep CSVROWFORPARSER estimatedpolicy-IGNITION_POLICY-i-[0-3][0-9]-erc-75-days-120.out -h | sed 's/^.................//' > ../databases/intensity_raw_policy.csv
+
+    grep CSVROWFORPARSER estimatedpolicy-IGNITION_POLICY-i-1-erc-*-days-*.out -h | sed 's/^.................//' > ../databases/raw_database.csv
+    """
+    databases = [
+        ["../databases/fuel_raw_policy.csv", "../databases/fuel_policy.csv"],
+        ["../databases/location_raw_policy.csv", "../databases/location_policy.csv"],
+        ["../databases/intensity_raw_policy.csv", "../databases/intensity_policy.csv"],
+        ["../databases/raw_database.csv", "../databases/database.csv"]
+    ]
+    for d in databases:
+        print "processing {}".format(d)
+        process_database(d[0], d[1])
