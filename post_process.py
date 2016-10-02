@@ -1,13 +1,184 @@
 import os
-from subprocess import call
-from struct import unpack
 import pickle
 import nose.tools
 import bz2
 import random
-import re
 import csv
 import array
+"""
+Post process runs from wildfire simulator in order to build and evaluate databases. This script is
+for a specific workflow and should not be applied to other systems, simulators, clusters, etc.
+
+Step 1: ssh into the high performance cluster
+
+Step 2: Copy the raw outputs and process them into a CSV
+
+cd /nfs/eecs-fserv/share/mcgregse/tmp
+cp /scratch/eecs-share/rhoutman/FireWoman/results/estimatedpolicy-* .
+grep CSVROWFORPARSER estimatedpolicy-HIGH_FUEL_POLICY-i-[3-6][0-9].out -h | sed 's/^.................//' > ../databases/fuel_raw_policy.csv
+grep CSVROWFORPARSER estimatedpolicy-SPLIT_LANDSCAPE_POLICY-i-[0-3][0-9].out -h | sed 's/^.................//' > ../databases/location_raw_policy.csv
+grep CSVROWFORPARSER estimatedpolicy-IGNITION_POLICY-i-*-erc-65-days-100.out -h | sed 's/^.................//' > ../databases/intensity_raw_policy.csv
+grep CSVROWFORPARSER estimatedpolicy-IGNITION_POLICY-i-1-erc-*-days-*.out -h | sed 's/^.................//' > ../databases/raw_database.csv
+
+Step 3: Post-process all the landscapes
+
+cd ../mfmci/
+./cluster_nosetest.sh post_process.py:test_post_process_landscapes
+
+Step 4: Confirm that all the landscape summaries have been built
+
+/nfs/guille/tgd/users/mcgregse/anaconda2/bin/nosetests post_process.py:test_check_for_incomplete_pickles -s
+
+Step 5: Process the output files to include the landscape summaries
+
+./cluster_nosetest.sh post_process.py:test_process_raw_output
+
+"""
+
+
+def pad_string(s, l=4):
+    """
+    s: the string to pad
+    l: the length to pad to
+    """
+    while len(s) < l:
+        s += "p"
+    return s
+
+
+def getRowIDs():
+    harvestVolumes = open("databases/wildfire/harvestVolumeList.txt", "r")
+    rowIDs = {}
+    for idx, line in enumerate(harvestVolumes):
+        values = line.strip().split(" ")[:-1]  # remove priority
+        for val_idx, val in enumerate(values):
+            values[val_idx] = pad_string(values[val_idx], 4)
+        rowIDs["-".join(values)] = idx
+    return rowIDs
+rowIDs = getRowIDs()
+
+
+def newLcpStateSummary(landscapeFileName, rowIDs=rowIDs):
+    """
+    Give the summary variables used for stitching based on the landscapes.
+    Landscapes are 940X1127X10=10593800 shorts (11653180)
+    :param landscapeFileName: The name of the landscape we want to generate a state summary for.
+    :return: array of values for distance metric variables
+
+    Fuel Model
+    Canopy Closure
+    Canopy Height start
+    Canopy Base Height start
+    Canopy Bulk Density
+    Covertype
+    Stand Density Index
+    Succession Class
+    Maximum Time in State
+    Stand Volume Age
+    highFuel
+    modFuel
+    lowFuel
+    percentHighFuel
+
+    1
+    2
+    3
+    4
+    5
+    6
+    7
+    8
+    ...
+    165
+    """
+
+    def getRowID(cover_type, sdi, succession_class, max_time_in_state, volume):
+        """
+        todo
+        """
+        row_hash_key = "{}-{}-{}-{}-{}".format(pad_string(cover_type),
+                                               pad_string(sdi),
+                                               pad_string(succession_class),
+                                               pad_string(max_time_in_state),
+                                               pad_string(volume))
+        return row_hash_key
+    lcpFile = bz2.BZ2File(landscapeFileName, "rb")
+    print "processing %s" % lcpFile
+
+    a = array.array('h')
+    a.fromstring(lcpFile.read())
+    lcpFile.close()
+    highFuel = 0
+    modFuel = 0
+    lowFuel = 0
+    summary = []
+
+    layers = {
+        "Fuel Model": [],
+        "Canopy Closure": [],
+        "Canopy Height start": [],
+        "Canopy Base Height start": [],
+        "Canopy Bulk Density": [],
+        "Covertype": [],
+        "Stand Density Index": [],
+        "Succession Class": [],
+        "Maximum Time in State": [],
+        "Stand Volume Age": []
+    }
+
+    for layerIdx in range(0,11):
+        average = 0
+        for pixelIdx in range(0,len(a)/11):
+            pixel = a[pixelIdx*11 + layerIdx]
+            if layerIdx == 0:
+                if pixel == 122 or pixel == 145:
+                    highFuel += 1
+                elif pixel == 121 or pixel == 186:
+                    modFuel += 1
+                elif pixel == 142 or pixel == 161 or pixel == 187 or pixel == 184 or pixel == 185:
+                    lowFuel += 1
+            average = float(average * pixelIdx + pixel)/(pixelIdx + 1.)
+
+            if layerIdx == 0:
+                layers["Fuel Model"].append(pixel)
+            elif layerIdx == 1:
+                layers["Canopy Closure"].append(pixel)
+            elif layerIdx == 2:
+                layers["Canopy Height start"].append(pixel)
+            elif layerIdx == 3:
+                layers["Canopy Base Height start"].append(pixel)
+            elif layerIdx == 4:
+                layers["Canopy Bulk Density"].append(pixel)
+            elif layerIdx == 5:
+                layers["Covertype"].append(pixel)
+            elif layerIdx == 6:
+                layers["Stand Density Index"].append(pixel)
+            elif layerIdx == 7:
+                layers["Succession Class"].append(pixel)
+            elif layerIdx == 8:
+                layers["Maximum Time in State"].append(pixel)
+            elif layerIdx == 9:
+                layers["Stand Volume Age"].append(pixel)
+        summary.append(average)
+    del summary[-1] # remove the last element because it is not needed
+    summary.append(highFuel)
+    summary.append(modFuel)
+    summary.append(lowFuel)
+    summary.append(float(highFuel)/(highFuel+modFuel+lowFuel))
+
+    counts = [0] * len(rowIDs.keys())
+    for idx, pixel in enumerate(layers["Fuel Model"]):
+        row_hash_key = getRowID(layers["Covertype"][idx],
+                         layers["Stand Density Index"][idx],
+                         layers["Succession Class"][idx],
+                         layers["Maximum Time in State"][idx],
+                         layers["Stand Volume Age"][idx])
+        rowID = rowIDs[row_hash_key]
+        counts[rowID] += 1
+    for count in counts:
+        summary.append(count)
+    return summary
+
 
 def lcpStateSummary(landscapeFileName):
     """
@@ -31,7 +202,6 @@ def lcpStateSummary(landscapeFileName):
     lowFuel
     percentHighFuel
     """
-    distanceMetricVariableCount = 10
 
     lcpFile = bz2.BZ2File(landscapeFileName, "rb")
     print "processing %s" % lcpFile
@@ -67,71 +237,72 @@ def test_post_process_landscapes():
     """
     Generate pickled version of all the state summaries for each of the landscapes in the landscapes directory
     """
-    landscapeDirectory = "/nfs/eecs-fserv/share/rhoutman/FireWoman/results/landscapes/"
-    resultsDirectory = "/nfs/eecs-fserv/share/mcgregse/landscape_summaries/"
-    allFiles = os.listdir(landscapeDirectory)
-    currentlyOutputFiles = os.listdir(resultsDirectory)
+    landscape_directory = "/nfs/eecs-fserv/share/rhoutman/FireWoman/results/landscapes/"
+    results_directory = "/nfs/eecs-fserv/share/mcgregse/landscape_summaries/"
+    all_files = os.listdir(landscape_directory)
+    currently_output_files = os.listdir(results_directory)
     files = []
+    jump_ahead_count = 500  # Up to how far to jump ahead if a summary was already built
 
     def diff(first, second):
         second = set(second)
         return [item for item in first if item not in second]
 
-    missing = diff(allFiles, currentlyOutputFiles)
+    missing = diff(all_files, currently_output_files)
     for filename in missing:
         if ".lcp.bz2" in filename:
             files.append(filename)
 
     print "processing {} files".format(len(files))
-    fileNum = int(len(files)*random.random())
-    #fileNum = 0
+    file_number = 0
 
     files.sort()
-    while fileNum < len(files):
-        f = files[fileNum]
+    while file_number < len(files):
+        f = files[file_number]
 
         print "processing {}".format(f)
-        if os.path.isfile(resultsDirectory+f):
+        if os.path.isfile(results_directory+f):
             print "skipping forward since this landscape is processed"
-            fileNum += int(500*random.random())
+            file_number += int(jump_ahead_count * random.random())
             continue
         try:
-            s = lcpStateSummary(landscapeDirectory+f)
-            if os.path.isfile(resultsDirectory+f):
+            s = newLcpStateSummary(landscape_directory+f)
+            if os.path.isfile(results_directory+f):
                 print "skipping forward since this landscape is processed"
-                fileNum += int(500*random.random())
+                file_number += int(jump_ahead_count * random.random())
                 continue
-            out = open(resultsDirectory+f, "wb")
+            out = open(results_directory+f, "wb")
             pickle.dump(s, out)
             out.close()
         except Exception as inst:
             print type(inst)
             print inst.args
             print "failed to summarize: {}".format(f)
-        fileNum += 1
+        file_number += 1
 
 
 def test_check_for_incomplete_pickles():
     """
     Open all the landscape pickles and check that they are properly formatted. Print the pickles that are not well formatted.
     """
-    resultsDirectories = ["/nfs/eecs-fserv/share/mcgregse/landscape_summaries/",
-                          "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_fuel/",
-                          "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_split/"]
-    for resultsDirectory in resultsDirectories:
+    results_directories = ["/nfs/eecs-fserv/share/mcgregse/landscape_summaries/",
+                           "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_fuel/",
+                           "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_split/"]
+    for resultsDirectory in results_directories:
         files = os.listdir(resultsDirectory)
-        fileNum = 0
-        while fileNum < len(files):
-            f = open(resultsDirectory + files[fileNum],"rb")
+        file_number = 0
+        while file_number < len(files):
+            f = open(resultsDirectory + files[file_number], "rb")
             try:
                 arr = pickle.load(f)
                 assert arr[0] >= 0
                 assert arr[1] >= 0
                 assert arr[2] >= 0
-            except Exception as inst:
-                print files[fileNum]
+            except Exception as _:
+                print files[file_number]
             f.close()
-            fileNum += 1
+            file_number += 1
+
 
 def process_database(database_input_path, database_output_path):
 
@@ -153,8 +324,8 @@ def process_database(database_input_path, database_output_path):
     ]
 
     # Each of these variables need a "start" value and an "end" value pulled from the subsequent state
-    ALL_STITCHING_VARIABLES_NAMES = [
-        "Fuel Model", # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
+    all_stitching_variables_names = [
+        "Fuel Model",  # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
         "Canopy Closure",
         "Canopy Height",
         "Canopy Base Height",
@@ -168,7 +339,7 @@ def process_database(database_input_path, database_output_path):
         "modFuel",
         "lowFuel",
         "percentHighFuel",
-        "Precipitation", # \/ pulled from the current row's state
+        "Precipitation",  # \/ pulled from the current row's state
         "MaxTemperature",
         "MinHumidity",
         "WindDirection",
@@ -183,7 +354,6 @@ def process_database(database_input_path, database_output_path):
         "SC"
     ]
 
-    # todo: this header does not appear to be correct
     # These are the variables in the output files as they are ordered in the raw output files.
     # "initialFire, action, year, startIndex, endIndex, ERC, SC, Precipitation, MaxTemperature, MinHumidity, WindDirection, WindSpeed, IgnitionCount, CrownFirePixels, SurfaceFirePixels, fireSuppressionCost, timberLoss_IJWF, lcpFileName, offOnPolicy, ignitionLocation, ignitionCovertype, ignitionAspect, ignitionSlope, ignitionFuelModel, ponderosaSC1, ponderosaSC2, ponderosaSC3, ponderosaSC4, ponderosaSC5, lodgepoleSC1, lodgepoleSC2, lodgepoleSC3, mixedConSC1, mixedConSC2, mixedConSC3, mixedConSC4, mixedConSC5, boardFeetHarvestTotal, boardFeetHarvestPonderosa, boardFeetHarvestLodgepole, boardFeetHarvestMixedConifer"
     raw_header = [
@@ -231,9 +401,9 @@ def process_database(database_input_path, database_output_path):
     ]
 
     out = file(database_output_path, "w")
-    for newVar in ALL_STITCHING_VARIABLES_NAMES:
+    for newVar in all_stitching_variables_names:
         out.write(newVar + " start,")
-    for newVar in ALL_STITCHING_VARIABLES_NAMES:
+    for newVar in all_stitching_variables_names:
         out.write(newVar + " end,")
     for newVar in raw_header:
         out.write(newVar + ",")
@@ -242,24 +412,19 @@ def process_database(database_input_path, database_output_path):
     def get_landscape_summary(path):
         lcp_name = path.split("/")[-1] + ".bz2"
         lcp_path = "/nfs/eecs-fserv/share/mcgregse/landscape_summaries/" + lcp_name
-
-        if lcp_name == "lcp_1_1_1_50_100_offPolicy.lcp.bz2" or lcp_name == "lcp_1_1_1_70_60_offPolicy.lcp.bz2":
-            return initial_landscape_description # todo, remove this trajectory set
-
         if os.path.isfile(lcp_path):
             f = open(lcp_path, "rb")
-            current_lcp_summary = pickle.load(f)
+            lcp_summary = pickle.load(f)
             f.close()
         else:
             print "Landscape not found!"
             print lcp_path
             assert False
-            return initial_landscape_description # todo: remove this, this is only here for testing the pipeline
-        return current_lcp_summary
+        return lcp_summary
 
     with open(database_input_path, 'rb') as csvfile:
-        transitionsReader = csv.DictReader(csvfile, fieldnames=raw_header)
-        transitions = list(transitionsReader)
+        transitions_reader = csv.DictReader(csvfile, fieldnames=raw_header)
+        transitions = list(transitions_reader)
         for idx, transitionDictionary in enumerate(transitions):
 
             year = int(transitionDictionary["year"])
@@ -279,7 +444,7 @@ def process_database(database_input_path, database_output_path):
                 out.write(str(entry) + ",")
 
             # Write the "other" starting features
-            for name in ALL_STITCHING_VARIABLES_NAMES[14:]:
+            for name in all_stitching_variables_names[14:]:
                 out.write(str(transitionDictionary[name]) + ",")
 
             # Write the lcp's summary from transitions[idx]
@@ -288,7 +453,7 @@ def process_database(database_input_path, database_output_path):
                 out.write(str(entry) + ",")
 
             # Write the "other" ending features from transitions[idx + 2]
-            for name in ALL_STITCHING_VARIABLES_NAMES[14:]:
+            for name in all_stitching_variables_names[14:]:
                 out.write(str(transitions[idx+2][name]) + ",")
 
             # Write out the rest of the result file. Yes there will be duplicates
@@ -308,7 +473,7 @@ def test_process_raw_output():
     # Fuel policy
     # estimatedpolicy-HIGH_FUEL_POLICY-i-[3-6][0-9].out
     # Location policy
-    # estimatedpolicy-IGNITION_POLICY-i-[0-3][0-9]-erc-75-days-120.out
+    # estimatedpolicy-IGNITION_POLICY-i-*-erc-65-days-100.out
     # Severity policy
     # estimatedpolicy-SPLIT_LANDSCAPE_POLICY-i-[0-3][0-9].out
     # database policy
@@ -320,7 +485,7 @@ def test_process_raw_output():
 
     grep CSVROWFORPARSER estimatedpolicy-SPLIT_LANDSCAPE_POLICY-i-[0-3][0-9].out -h | sed 's/^.................//' > ../databases/location_raw_policy.csv
 
-    grep CSVROWFORPARSER estimatedpolicy-IGNITION_POLICY-i-[0-3][0-9]-erc-75-days-120.out -h | sed 's/^.................//' > ../databases/intensity_raw_policy.csv
+    grep CSVROWFORPARSER estimatedpolicy-IGNITION_POLICY-i-*-erc-65-days-100.out -h | sed 's/^.................//' > ../databases/intensity_raw_policy.csv
 
     grep CSVROWFORPARSER estimatedpolicy-IGNITION_POLICY-i-1-erc-*-days-*.out -h | sed 's/^.................//' > ../databases/raw_database.csv
     """
