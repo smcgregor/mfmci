@@ -50,7 +50,7 @@ def getRowIDs():
     harvestVolumes = open("databases/wildfire/harvestVolumeList.txt", "r")
     rowIDs = {}
     for idx, line in enumerate(harvestVolumes):
-        values = line.strip().split(" ")[:-1]  # remove priority
+        values = line.strip().split(" ")[:-2]  # remove priority, volume
         for val_idx, val in enumerate(values):
             values[val_idx] = pad_string(values[val_idx], 4)
         rowIDs["-".join(values)] = idx
@@ -92,15 +92,15 @@ def newLcpStateSummary(landscapeFileName, rowIDs=rowIDs):
     165
     """
 
-    def getRowID(cover_type, sdi, succession_class, max_time_in_state, volume):
+    def getRowID(cover_type, sdi, succession_class, max_time_in_state):#, volume):
         """
         todo
         """
-        row_hash_key = "{}-{}-{}-{}-{}".format(pad_string(cover_type),
-                                               pad_string(sdi),
-                                               pad_string(succession_class),
-                                               pad_string(max_time_in_state),
-                                               pad_string(volume))
+        row_hash_key = "{}-{}-{}-{}".format(pad_string(str(cover_type)),
+                                         pad_string(str(sdi)),
+                                         pad_string(str(succession_class)),
+                                         pad_string(str(max_time_in_state)))#,
+                                         #pad_string(str(volume)))
         return row_hash_key
     lcpFile = bz2.BZ2File(landscapeFileName, "rb")
     print "processing %s" % lcpFile
@@ -168,11 +168,27 @@ def newLcpStateSummary(landscapeFileName, rowIDs=rowIDs):
 
     counts = [0] * len(rowIDs.keys())
     for idx, pixel in enumerate(layers["Fuel Model"]):
+
+        #print layers["Covertype"][idx]
+
+        if layers["Covertype"][idx] == 99 or layers["Stand Density Index"][idx] == 0:
+            continue
+
+        if layers["Maximum Time in State"][idx] < 20:
+            continue
+
+        if layers["Covertype"][idx] == 46 and layers["Maximum Time in State"][idx] < 80:
+            continue
+
+        rounded = int(layers["Maximum Time in State"][idx] / 10)*10
+
+        #print layers["Stand Volume Age"][idx]
+
         row_hash_key = getRowID(layers["Covertype"][idx],
                          layers["Stand Density Index"][idx],
                          layers["Succession Class"][idx],
-                         layers["Maximum Time in State"][idx],
-                         layers["Stand Volume Age"][idx])
+                         rounded)#,
+                         #layers["Stand Volume Age"][idx])
         rowID = rowIDs[row_hash_key]
         counts[rowID] += 1
     for count in counts:
