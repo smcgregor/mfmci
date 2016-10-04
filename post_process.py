@@ -92,15 +92,14 @@ def newLcpStateSummary(landscapeFileName, rowIDs=rowIDs):
     165
     """
 
-    def getRowID(cover_type, sdi, succession_class, max_time_in_state):#, volume):
+    def getRowID(cover_type, sdi, succession_class, max_time_in_state):
         """
         todo
         """
         row_hash_key = "{}-{}-{}-{}".format(pad_string(str(cover_type)),
                                          pad_string(str(sdi)),
                                          pad_string(str(succession_class)),
-                                         pad_string(str(max_time_in_state)))#,
-                                         #pad_string(str(volume)))
+                                         pad_string(str(max_time_in_state)))
         return row_hash_key
     lcpFile = bz2.BZ2File(landscapeFileName, "rb")
     print "processing %s" % lcpFile
@@ -166,24 +165,28 @@ def newLcpStateSummary(landscapeFileName, rowIDs=rowIDs):
     summary.append(lowFuel)
     summary.append(float(highFuel)/(highFuel+modFuel+lowFuel))
 
-    counts = [0] * len(rowIDs.keys())
+    counts = [0] * (len(rowIDs.keys()) + 1)  # Add 1 to accomodate duplicate row
     for idx, pixel in enumerate(layers["Fuel Model"]):
 
-        #print layers["Covertype"][idx]
+        mtis = layers["Maximum Time in State"][idx]
 
-        if layers["Covertype"][idx] == 99 or layers["Stand Density Index"][idx] == 0:
+        if layers["Covertype"][idx] == 99 or layers["Stand Density Index"][idx] == 0 or layers["Covertype"][idx] == 9:
             continue
 
         if layers["Maximum Time in State"][idx] < 20:
             continue
 
-        if layers["Covertype"][idx] == 46 and layers["Maximum Time in State"][idx] < 80:
+        if layers["Covertype"][idx] == 46 and mtis < 80:
             continue
 
-        rounded = int(layers["Maximum Time in State"][idx] / 10)*10
+        if layers["Covertype"][idx] == 46 and layers["Stand Density Index"][idx] == 1 and layers["Succession Class"][idx] == 1:
+            continue
 
-        #print layers["Stand Volume Age"][idx]
+        if (layers["Covertype"][idx] == 45 or layers["Covertype"][idx] == 43) and layers["Stand Density Index"][idx] == 1 and layers["Succession Class"][idx] == 2 and mtis >= 80 and mtis < 90:
+            mtis = 70
 
+        rounded = int(mtis / 10)*10
+        rounded = min(100, rounded)
         row_hash_key = getRowID(layers["Covertype"][idx],
                          layers["Stand Density Index"][idx],
                          layers["Succession Class"][idx],
@@ -255,6 +258,10 @@ def test_post_process_landscapes():
     """
     landscape_directory = "/nfs/eecs-fserv/share/rhoutman/FireWoman/results/landscapes/"
     results_directory = "/nfs/eecs-fserv/share/mcgregse/landscape_summaries/"
+
+    # landscape_directory = "/nfs/eecs-fserv/share/mcgregse/starting_landscape_summary_tmp/"
+    # results_directory = "/nfs/eecs-fserv/share/mcgregse/starting_landscape_summary/"
+    
     all_files = os.listdir(landscape_directory)
     currently_output_files = os.listdir(results_directory)
     files = []
