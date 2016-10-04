@@ -343,11 +343,14 @@ def process_database(database_input_path, database_output_path):
         138226,
         18429,
         643003,
-        0.1728563961
+        0.1728563961,
+
+        # \/ Priority rows
+        0, 0, 0, 0, 0, 3384, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48087, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1161, 0, 0, 0, 0, 0, 0, 0, 0, 3019, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 108226, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9068, 0, 0, 105610, 0, 0, 0, 0, 17383, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 70651, 0, 0, 0, 0, 33395, 0, 0, 0, 0, 18429, 0, 0, 0, 0
     ]
 
     # Each of these variables need a "start" value and an "end" value pulled from the subsequent state
-    all_stitching_variables_names = [
+    landscape_summary_names = [
         "Fuel Model",  # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
         "Canopy Closure",
         "Canopy Height",
@@ -361,7 +364,10 @@ def process_database(database_input_path, database_output_path):
         "highFuel",
         "modFuel",
         "lowFuel",
-        "percentHighFuel",
+        "percentHighFuel"
+    ]
+    harvest_summary_names = ["PriorityRow" + str(i) for i in range(1, 174)]
+    exogenous_summary_names = [
         "Precipitation",  # \/ pulled from the current row's state
         "MaxTemperature",
         "MinHumidity",
@@ -376,6 +382,7 @@ def process_database(database_input_path, database_output_path):
         "ERC",
         "SC"
     ]
+    all_stitching_variables_names = landscape_summary_names + harvest_summary_names + exogenous_summary_names
 
     # These are the variables in the output files as they are ordered in the raw output files.
     # "initialFire, action, year, startIndex, endIndex, ERC, SC, Precipitation, MaxTemperature, MinHumidity, WindDirection, WindSpeed, IgnitionCount, CrownFirePixels, SurfaceFirePixels, fireSuppressionCost, timberLoss_IJWF, lcpFileName, offOnPolicy, ignitionLocation, ignitionCovertype, ignitionAspect, ignitionSlope, ignitionFuelModel, ponderosaSC1, ponderosaSC2, ponderosaSC3, ponderosaSC4, ponderosaSC5, lodgepoleSC1, lodgepoleSC2, lodgepoleSC3, mixedConSC1, mixedConSC2, mixedConSC3, mixedConSC4, mixedConSC5, boardFeetHarvestTotal, boardFeetHarvestPonderosa, boardFeetHarvestLodgepole, boardFeetHarvestMixedConifer"
@@ -467,7 +474,7 @@ def process_database(database_input_path, database_output_path):
                 out.write(str(entry) + ",")
 
             # Write the "other" starting features
-            for name in all_stitching_variables_names[14:]:
+            for name in exogenous_summary_names:
                 out.write(str(transitionDictionary[name]) + ",")
 
             # Write the lcp's summary from transitions[idx]
@@ -476,7 +483,7 @@ def process_database(database_input_path, database_output_path):
                 out.write(str(entry) + ",")
 
             # Write the "other" ending features from transitions[idx + 2]
-            for name in all_stitching_variables_names[14:]:
+            for name in exogenous_summary_names:
                 out.write(str(transitions[idx+2][name]) + ",")
 
             # Write out the rest of the result file. Yes there will be duplicates
