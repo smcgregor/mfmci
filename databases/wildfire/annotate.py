@@ -3,43 +3,142 @@ from PIL import Image
 import StringIO
 from struct import unpack
 import bz2
+import csv
+
+harvest_priority_rows = [119, 136, 159, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # use range(1, 174) to include all of them
 
 # All the variables that are used in the distance metric
 PRE_TRANSITION_VARIABLES = [
-    "Fuel Model start", # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
-    "Canopy Closure start",
-    "Canopy Height start",
-    "Canopy Base Height start",
-    "Canopy Bulk Density start",
-    "Covertype start",
-    "Stand Density Index start",
-    "Succession Class start",
-    "Maximum Time in State start",
-    "Stand Volume Age start"
+    #"Fuel Model start", # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
+    #"Canopy Closure start",
+    #"Canopy Height start",
+    #"Canopy Base Height start",
+    #"Canopy Bulk Density start",
+    #"Covertype start",
+    #"Stand Density Index start",
+    #"Succession Class start",
+    #"Maximum Time in State start",
+    #"Stand Volume Age start",#,
+    #"highFuel start",
+    #"modFuel start",
+    #"lowFuel start",
+
+    "year start"
+
+    #"Precipitation start",
+    #"MaxTemperature start",
+    #"MinHumidity start",
+    #"WindSpeed start",
+    #"ignitionCovertype start",
+    #"ignitionSlope start",
+    #"startIndex start",
+    #"endIndex start",
+    #"ERC start",
+    #"SC start"
 ]
+harvest_summary_names_start = ["PriorityRow" + str(i) + " start" for i in harvest_priority_rows]
+PRE_TRANSITION_VARIABLES += harvest_summary_names_start
+
+PRE_TRANSITION_EXOGENOUS_VARIABLES = [
+    #"Fuel Model start", # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
+    #"Canopy Closure start",
+    #"Canopy Height start",
+    #"Canopy Base Height start",
+    #"Canopy Bulk Density start",
+    #"Covertype start",
+    #"Stand Density Index start",
+    #"Succession Class start",
+    #"Maximum Time in State start",
+    #"Stand Volume Age start",
+    #"highFuel start",
+    #"modFuel start",
+    #"lowFuel start",
+
+    "year start",
+
+    "Precipitation start",
+    "MaxTemperature start",
+    "MinHumidity start",
+    "WindSpeed start",
+    "ignitionCovertype start",
+    "ignitionSlope start",
+    "startIndex start",
+    "ERC start",
+    "SC start"
+]
+PRE_TRANSITION_EXOGENOUS_VARIABLES += harvest_summary_names_start
 
 # The variables that correspond to the variables in PRE_TRANSITION_VARIABLES
 POST_TRANSITION_VARIABLES = [
-    "Fuel Model end", # \/ pulled from the landscape summary of the current row
-    "Canopy Closure end",
-    "Canopy Height end",
-    "Canopy Base Height end",
-    "Canopy Bulk Density end",
-    "Covertype end",
-    "Stand Density Index end",
-    "Succession Class end",
-    "Maximum Time in State end",
-    "Stand Volume Age end"
+    #"Fuel Model end", # \/ pulled from the landscape summary of the current row
+    #"Canopy Closure end",
+    #"Canopy Height end",
+    #"Canopy Base Height end",
+    #"Canopy Bulk Density end",
+    #"Covertype end",
+    #"Stand Density Index end",
+    #"Succession Class end",
+    #"Maximum Time in State end",
+    #"Stand Volume Age end",#,
+    #"highFuel end",
+    #"modFuel end",
+    #"lowFuel end",
+
+    "year end"
+
+    #"Precipitation end",
+    #"MaxTemperature end",
+    #"MinHumidity end",
+    #"WindSpeed end",
+    #"ignitionCovertype end",
+    #"ignitionSlope end",
+    #"startIndex end",
+    #"endIndex end",
+    #"ERC end",
+    #"SC end"
 ]
+harvest_summary_names_end = ["PriorityRow" + str(i) + " end" for i in harvest_priority_rows]
+POST_TRANSITION_VARIABLES += harvest_summary_names_end
+
+# The variables that correspond to the variables in PRE_TRANSITION_VARIABLES
+POST_TRANSITION_EXOGENOUS_VARIABLES = [
+    #"Fuel Model end", # \/ pulled from the landscape summary of the current row
+    #"Canopy Closure end",
+    #"Canopy Height end",
+    #"Canopy Base Height end",
+    #"Canopy Bulk Density end",
+    #"Covertype end",
+    #"Stand Density Index end",
+    #"Succession Class end",
+    #"Maximum Time in State end",
+    #"Stand Volume Age end",
+    #"highFuel end",
+    #"modFuel end",
+    #"lowFuel end",
+
+    "year end",
+
+    "Precipitation end",
+    "MaxTemperature end",
+    "MinHumidity end",
+    "WindSpeed end",
+    "ignitionCovertype end",
+    "ignitionSlope end",
+    "startIndex end",
+    "ERC end",
+    "SC end"
+]
+POST_TRANSITION_EXOGENOUS_VARIABLES += harvest_summary_names_end
 
 # All the variables we visualize
 STATE_SUMMARY_VARIABLES = [
-    "action",
+    #"offPolicy",
+    #"action",
     "CrownFirePixels",
     "SurfaceFirePixels",
     "fireSuppressionCost",
     "timberLoss_IJWF",
-    "boardFeetHarvestTotal",
+    #"boardFeetHarvestTotal",
     "boardFeetHarvestPonderosa",
     "boardFeetHarvestLodgepole",
     "boardFeetHarvestMixedConifer",
@@ -210,20 +309,26 @@ def get_image(image_file_name):
     img_io.seek(0)
     return img_io
 
+
 def PROCESS_ROW(additional_state):
     """
     Process the additional state to include the proper titles and a list of the images for the /state endpoint.
     :param additional_state:
     :return:
     """
-    if "onPolicy" in additional_state["lcpFileName"]:
-        additional_state["on policy"] = 1
-    else:
-        additional_state["on policy"] = 0
+    additional_state["on policy"] = additional_state["offPolicy"] == 0
     additional_state["time step"] = additional_state["year"]
     additional_state["trajectory identifier"] = additional_state["initialFire"]
+
+    policy_parameters = additional_state["lcpFileName"].split("_")[4:6]
+    policy_parameter_erc = policy_parameters[0]
+    policy_parameter_day = policy_parameters[1]
+
+    additional_state["stitched policy ERC"] = float(policy_parameters[0])
+    additional_state["stitched policy Days"] = float(policy_parameters[1])
+
     additional_state["policy identifier"] = "{}-{}" \
-        .format(additional_state["policyThresholdERC"], additional_state["policyThresholdDays"])
+        .format(policy_parameter_erc, policy_parameter_day)
 
     # Layers:
     # 0: fuel
@@ -242,14 +347,9 @@ def PROCESS_ROW(additional_state):
     #   lcp_INITIALEVENT_CURRENTEVENT_ACTION_ERC_DAYS_offPolicy.lcp
     additional_state["image row"] = []
     for layer in [0]:
-        file_name = "{}-{}-{}-{}-{}-{}-{}".format(layer,
-                                                  additional_state["initialFire"],
-                                                  additional_state["year"],
-                                                  additional_state["action"],
-                                                  additional_state["policyThresholdERC"],
-                                                  additional_state["policyThresholdDays"],
-                                                  additional_state["on policy"],
-                                                  )
+        file_name = "{}-{}".format(layer,
+                                   additional_state["lcpFileName"] # todo: update this for the new database
+                                  )
         additional_state["image row"].append(file_name)
 
 # The initialization object for MDPvis
@@ -279,8 +379,8 @@ mdpvis_initialization_object = {
                                    "name": "Number of Runs Limit",
                                    "description": "The number of policy evaluations",
                                    "current_value": 10,
-                                   "max": 100,
-                                   "min": 2,
+                                   "max": 40,
+                                   "min": 1,
                                    "step": 1,
                                    "units": "Unitless"
                                }
@@ -293,10 +393,28 @@ mdpvis_initialization_object = {
             "default_rendering": "radar", # Default to a radar plot. User can switch to input elements.
             "quantitative": [  # Real valued parameters
                 {
+                    "name": "Use Location Policy",
+                    "description": "Use a policy that splits the landscape geographically",
+                    "current_value": 0,
+                    "max": 1,
+                    "min": 0,
+                    "step": 1,
+                    "units": "boolean"
+                },
+                {
+                    "name": "Use Landscape Policy",
+                    "description": "Use a policy based on the total fuels on the landscape",
+                    "current_value": 0,
+                    "max": 1,
+                    "min": 0,
+                    "step": 1,
+                    "units": "boolean"
+                },
+                {
                     "name": "ERC Threshold",
                     "description": "Values of Energy Release Component greater than " +
                                    "this parameter will be suppressed (up to the value of 95)",
-                    "current_value": 0,
+                    "current_value": 65,
                     "max": 95,
                     "min": 0,
                     "step": 1,
@@ -306,7 +424,7 @@ mdpvis_initialization_object = {
                     "name": "Days Until End of Season Threshold",
                     "description": "Values of Ignition Day less than this parameter will " +
                                    "be suppressed if the ERC parameter is in the suppressable range",
-                    "current_value": 0,
+                    "current_value": 100,
                     "max": 180,
                     "min": 0,
                     "step": 1,
@@ -327,7 +445,7 @@ mdpvis_initialization_object = {
                                    "name": "Sample Count",
                                    "description": "Specify how many trajectories to generate",
                                    "current_value": 10,
-                                   "max": 1000,
+                                   "max": 80,
                                    "min": 1,
                                    "step": 1,
                                    "units": "#"
@@ -340,6 +458,15 @@ mdpvis_initialization_object = {
                                    "min": 1,
                                    "step": 1,
                                    "units": "Years"
+                               },
+                               {
+                                   "name": "Render Ground Truth",
+                                   "description": "Render the Monte Carlo trajectories instead of the MFMCi trajectories",
+                                   "current_value": 0,
+                                   "max": 1,
+                                   "min": 0,
+                                   "step": 1,
+                                   "units": ""
                                }
             ],
             "categorical": [  # Discrete valued parameters, uses drop down or radar buttons for selection
