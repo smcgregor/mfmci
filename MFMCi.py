@@ -7,7 +7,6 @@ Based on `Batch Mode Reinforcement Learning based on the
 Synthesis of Artificial Trajectories <https://goo.gl/1yveeS>`_
 """
 
-import argparse
 from sklearn.neighbors import BallTree
 import numpy as np
 import os.path
@@ -30,20 +29,30 @@ class MFMCi():
     The domain is constructed from a database of state transitions.\n
     """
 
-    def __init__(self, domain_name):
+    def __init__(self, domain_name, database_file_name=None, include_exogenous=False):
         """
         :param domain_name: The name of the domain as given in the databases folder
         """
         self.domain_name = domain_name
         self.database_filename = "databases/" + self.domain_name + "/database.csv"
+        if not (database_file_name is None):
+            self.database_filename = database_file_name
+
         self.database_opener = open
         if not os.path.isfile(self.database_filename):
             self.database_filename += ".bz2"
             self.database_opener = bz2.BZ2File
 
         annotate_module = importlib.import_module("databases." + domain_name + ".annotate")
-        self.PRE_TRANSITION_VARIABLES = annotate_module.PRE_TRANSITION_VARIABLES
-        self.POST_TRANSITION_VARIABLES = annotate_module.POST_TRANSITION_VARIABLES
+        if include_exogenous:
+            self.PRE_TRANSITION_VARIABLES = annotate_module.PRE_TRANSITION_EXOGENOUS_VARIABLES
+            self.POST_TRANSITION_VARIABLES = annotate_module.POST_TRANSITION_EXOGENOUS_VARIABLES
+        else:
+            self.PRE_TRANSITION_VARIABLES = annotate_module.PRE_TRANSITION_VARIABLES
+            self.POST_TRANSITION_VARIABLES = annotate_module.POST_TRANSITION_VARIABLES
+
+        self.exogenous_variables = set(self.PRE_TRANSITION_VARIABLES) - set(annotate_module.PRE_TRANSITION_VARIABLES)
+
         self.STATE_SUMMARY_VARIABLES = annotate_module.STATE_SUMMARY_VARIABLES
         self.POSSIBLE_ACTIONS = annotate_module.POSSIBLE_ACTIONS
         try:
@@ -102,10 +111,13 @@ class MFMCi():
 
         met = np.identity(len(self.PRE_TRANSITION_VARIABLES))
         for idx, variable in enumerate(self.PRE_TRANSITION_VARIABLES):
-            variance = variances[variable]
-            if variance == 0:
-                variance = 1.0
-            met[idx][idx] = 1.0/variance
+            if variable == "year start":
+                met[idx][idx] = 99999999.0
+            else:
+                variance = variances[variable]
+                if variance == 0:
+                    variance = 1.0
+                met[idx][idx] = 1.0/variance
         self.distance_metric = np.array(met)
 
     def _insort_merge(self, state, ns, state_summary, additional_state, is_initial, terminal):
@@ -186,7 +198,6 @@ class MFMCi():
                 if headerValue:
                     self.column_names.append(headerValue.strip())
             for row in transitions:
-                #del row[-1] # todo: remove?
                 parsed_row = map(parse_value, row)
                 state = []
                 ns = []
@@ -194,20 +205,28 @@ class MFMCi():
                 additional_state = {}
                 for idx, header_value in enumerate(self.column_names):
                     if header_value not in self.PRE_TRANSITION_VARIABLES \
-                            and header_value not in self.POST_TRANSITION_VARIABLES \
-                            and header_value not in self.STATE_SUMMARY_VARIABLES:
+                            and header_value not in self.POST_TRANSITION_VARIABLES:
                         additional_state[header_value] = parsed_row[idx]
+                additional_state["highFuelPercent"] = parsed_row[self.column_names.index("percentHighFuel start")]
                 additional_state["action"] = parsed_row[self.column_names.index("action")]
                 self.PROCESS_ROW(additional_state)
                 additional_state["on policy"] = (int(additional_state["on policy"]) == 1)
                 for stitchingVariableIdx, variable in enumerate(self.PRE_TRANSITION_VARIABLES):
-                    state_index = self.column_names.index(variable)
-                    state.append(parsed_row[state_index])
-                    ns_index = self.column_names.index(self.POST_TRANSITION_VARIABLES[stitchingVariableIdx])
-                    ns.append(parsed_row[ns_index])
+                    if variable == "year start":
+                        year = parsed_row[self.column_names.index("year")]
+                        state.append(year)
+                        ns.append(year + 1)
+                    else:
+                        state_index = self.column_names.index(variable)
+                        state.append(parsed_row[state_index])
+                        ns_index = self.column_names.index(self.POST_TRANSITION_VARIABLES[stitchingVariableIdx])
+                        ns.append(parsed_row[ns_index])
                 for variable in self.STATE_SUMMARY_VARIABLES:
                     state_summary_variable_index = self.column_names.index(variable)
                     state_summary[variable] = parsed_row[state_summary_variable_index]
+                state_summary["stitched policy ERC"] = additional_state["stitched policy ERC"]
+                state_summary["stitched policy Days"] = additional_state["stitched policy Days"]
+
                 is_terminal = False  # no states are terminal
                 is_initial = (additional_state["time step"] == 0)
                 assert len(state) == len(ns)
@@ -295,13 +314,20 @@ class MFMCi():
         :param policy:
         :return:
         """
-        pre = self.preStateDistanceMetricVariables
-        (post_stitch_transition_set, stitch_distance) = self._get_closest_transition_set(pre)
-        self.lastStitchDistance = stitch_distance
-        assert stitch_distance >= 0
+        action_not_found = True  # hack for biased database
+        while action_not_found:
+            pre = self.preStateDistanceMetricVariables
+            (post_stitch_transition_set, stitch_distance) = self._get_closest_transition_set(pre)
+            self.lastStitchDistance = stitch_distance
+            assert stitch_distance >= 0
 
-        action = policy(post_stitch_transition_set)
-        assert action >= 0
+            action = policy(post_stitch_transition_set)
+            assert action >= 0
+
+            if action in post_stitch_transition_set.results.keys():
+                action_not_found = False
+            if action_not_found:
+                post_stitch_transition_set.last_accessed_iteration = self.trajectory_set_counter
 
         post_stitch_transition_set.last_accessed_iteration = self.trajectory_set_counter
         result = post_stitch_transition_set.get_action_result(action)
@@ -310,7 +336,13 @@ class MFMCi():
         self.terminal = post_stitch_transition_set.is_terminal
         self.state_summary = result["state summary variables"]
 
+        self.state_summary["stitch distance"] = stitch_distance
+
         self.preStateDistanceMetricVariables = result["post transition variables"]
+
+        lcp = result["additional variables"]["lcpFileName"].split("_")   # hack to prohibit self stitching
+        self.trajectory_identifier = "{}-{}-{}".format(lcp[1], lcp[4], lcp[5])  # initial fire, ERC, DAY
+
         return self.state_summary, self.terminal
 
     def s0(self):
@@ -321,6 +353,7 @@ class MFMCi():
         then they could be cached for repeated use under many different policies.
         :return: ``state`` for the starting state.
         """
+        self.trajectory_identifier = ""  # hack to prohibit self stitching
         self.terminal = False
         self.state = {}  # There is no state until it is stitched and the complete state is recovered
         idx = int(math.floor(self.random_state.uniform() * len(self.init_state_tuples)))
@@ -385,10 +418,3 @@ class MFMCi():
             return ret
         except ValueError:
             return r
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Serve the selected domain.')
-    parser.add_argument('domain', metavar='D', type=str, nargs='+',
-                        help='named according to the folder in the domains folder')
-    print "todo: finish implementing this"
-    exit(1)

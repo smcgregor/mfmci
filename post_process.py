@@ -25,6 +25,8 @@ Step 3: Post-process all the landscapes
 cd ../mfmci/
 ./cluster_nosetest.sh post_process.py:test_post_process_landscapes
 
+/nfs/guille/tgd/users/mcgregse/anaconda2/bin/nosetests post_process.py:test_post_process_landscapes -s
+
 Step 4: Confirm that all the landscape summaries have been built
 
 /nfs/guille/tgd/users/mcgregse/anaconda2/bin/nosetests post_process.py:test_check_for_incomplete_pickles -s
@@ -32,6 +34,10 @@ Step 4: Confirm that all the landscape summaries have been built
 Step 5: Process the output files to include the landscape summaries
 
 ./cluster_nosetest.sh post_process.py:test_process_raw_output
+
+or
+
+/nfs/guille/tgd/users/mcgregse/anaconda2/bin/nosetests post_process.py:test_process_raw_output -s
 
 """
 
@@ -58,7 +64,7 @@ def getRowIDs():
 rowIDs = getRowIDs()
 
 
-def newLcpStateSummary(landscapeFileName, rowIDs=rowIDs):
+def lcpStateSummary(landscapeFileName, rowIDs=rowIDs):
     """
     Give the summary variables used for stitching based on the landscapes.
     Landscapes are 940X1127X10=10593800 shorts (11653180)
@@ -94,7 +100,7 @@ def newLcpStateSummary(landscapeFileName, rowIDs=rowIDs):
 
     def getRowID(cover_type, sdi, succession_class, max_time_in_state):
         """
-        todo
+        Get the row's hash key so we can maintain its counter.
         """
         row_hash_key = "{}-{}-{}-{}".format(pad_string(str(cover_type)),
                                          pad_string(str(sdi)),
@@ -170,87 +176,43 @@ def newLcpStateSummary(landscapeFileName, rowIDs=rowIDs):
 
         mtis = layers["Maximum Time in State"][idx]
 
+        # The non-growing portions of the landscape are not counted
         if layers["Covertype"][idx] == 99 or layers["Stand Density Index"][idx] == 0 or layers["Covertype"][idx] == 9:
             continue
 
+        # The young pixels are not harvested
         if layers["Maximum Time in State"][idx] < 20:
             continue
 
+        # Lodgepole is not harvested before 80 years
         if layers["Covertype"][idx] == 46 and mtis < 80:
             continue
 
+        # This combination is not harvested
         if layers["Covertype"][idx] == 46 and layers["Stand Density Index"][idx] == 1 and layers["Succession Class"][idx] == 1:
             continue
 
-        if (layers["Covertype"][idx] == 45 or layers["Covertype"][idx] == 43) and layers["Stand Density Index"][idx] == 1 and layers["Succession Class"][idx] == 2 and mtis >= 80 and mtis < 90:
+        # change mtis to 70 when it has values matching the missing values in the table
+        if (layers["Covertype"][idx] == 45 or layers["Covertype"][idx] == 43) \
+                and layers["Stand Density Index"][idx] == 1 \
+                and layers["Succession Class"][idx] == 2 \
+                and mtis >= 80 and mtis < 90:
             mtis = 70
 
+        # Round age down to the nearest decade
         rounded = int(mtis / 10)*10
         rounded = min(100, rounded)
+
         row_hash_key = getRowID(layers["Covertype"][idx],
                          layers["Stand Density Index"][idx],
                          layers["Succession Class"][idx],
-                         rounded)#,
-                         #layers["Stand Volume Age"][idx])
+                         rounded)
         rowID = rowIDs[row_hash_key]
         counts[rowID] += 1
     for count in counts:
         summary.append(count)
     return summary
 
-
-def lcpStateSummary(landscapeFileName):
-    """
-    Give the summary variables used for stitching based on the landscapes.
-    Landscapes are 940X1127X10=10593800 shorts (11653180)
-    :param landscapeFileName: The name of the landscape we want to generate a state summary for.
-    :return: array of values for distance metric variables
-
-    Fuel Model
-    Canopy Closure
-    Canopy Height start
-    Canopy Base Height start
-    Canopy Bulk Density
-    Covertype
-    Stand Density Index
-    Succession Class
-    Maximum Time in State
-    Stand Volume Age
-    highFuel
-    modFuel
-    lowFuel
-    percentHighFuel
-    """
-
-    lcpFile = bz2.BZ2File(landscapeFileName, "rb")
-    print "processing %s" % lcpFile
-
-    a = array.array('h')
-    a.fromstring(lcpFile.read())
-    lcpFile.close()
-    highFuel = 0
-    modFuel = 0
-    lowFuel = 0
-    summary = []
-    for layerIdx in range(0,11):
-        average = 0
-        for pixelIdx in range(0,len(a)/11):
-            pixel = a[pixelIdx*11 + layerIdx]
-            if layerIdx == 0:
-                if pixel == 122 or pixel == 145:
-                    highFuel += 1
-                elif pixel == 121 or pixel == 186:
-                    modFuel += 1
-                elif pixel == 142 or pixel == 161 or pixel == 187 or pixel == 184 or pixel == 185:
-                    lowFuel += 1
-            average = float(average * pixelIdx + pixel)/(pixelIdx + 1.)
-        summary.append(average)
-    del summary[-1] # remove the last element because it is not needed                                                                                                                                                                    
-    summary.append(highFuel)
-    summary.append(modFuel)
-    summary.append(lowFuel)
-    summary.append(float(highFuel)/(highFuel+modFuel+lowFuel))
-    return summary
 
 def test_post_process_landscapes():
     """
@@ -259,8 +221,14 @@ def test_post_process_landscapes():
     landscape_directory = "/nfs/eecs-fserv/share/rhoutman/FireWoman/results/landscapes/"
     results_directory = "/nfs/eecs-fserv/share/mcgregse/landscape_summaries/"
 
-    # landscape_directory = "/nfs/eecs-fserv/share/mcgregse/starting_landscape_summary_tmp/"
-    # results_directory = "/nfs/eecs-fserv/share/mcgregse/starting_landscape_summary/"
+    #landscape_directory = "/nfs/eecs-fserv/share/rhoutman/FireWoman/results/landscapes_split/"
+    #results_directory = "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_split/"
+
+    #landscape_directory = "/nfs/eecs-fserv/share/rhoutman/FireWoman/results/landscapes_fuel/"
+    #results_directory = "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_fuel/"
+
+    #landscape_directory = "/nfs/eecs-fserv/share/mcgregse/starting_landscape_summary_tmp/"
+    #results_directory = "/nfs/eecs-fserv/share/mcgregse/starting_landscape_summary/"
     
     all_files = os.listdir(landscape_directory)
     currently_output_files = os.listdir(results_directory)
@@ -289,7 +257,7 @@ def test_post_process_landscapes():
             file_number += int(jump_ahead_count * random.random())
             continue
         try:
-            s = newLcpStateSummary(landscape_directory+f)
+            s = lcpStateSummary(landscape_directory+f)
             if os.path.isfile(results_directory+f):
                 print "skipping forward since this landscape is processed"
                 file_number += int(jump_ahead_count * random.random())
@@ -321,13 +289,15 @@ def test_check_for_incomplete_pickles():
                 assert arr[0] >= 0
                 assert arr[1] >= 0
                 assert arr[2] >= 0
+                assert len(arr) == 187
             except Exception as _:
                 print files[file_number]
+                print len(arr)
             f.close()
             file_number += 1
 
 
-def process_database(database_input_path, database_output_path):
+def process_database(database_input_path, database_output_path, landscape_summary_path):
 
     initial_landscape_description = [
         130.011288678,
@@ -439,9 +409,9 @@ def process_database(database_input_path, database_output_path):
         out.write(newVar + ",")
     out.write("\n")
 
-    def get_landscape_summary(path):
+    def get_landscape_summary(path, landscape_summary_path=landscape_summary_path):
         lcp_name = path.split("/")[-1] + ".bz2"
-        lcp_path = "/nfs/eecs-fserv/share/mcgregse/landscape_summaries/" + lcp_name
+        lcp_path = landscape_summary_path + lcp_name
         if os.path.isfile(lcp_path):
             f = open(lcp_path, "rb")
             lcp_summary = pickle.load(f)
@@ -520,11 +490,19 @@ def test_process_raw_output():
     grep CSVROWFORPARSER estimatedpolicy-IGNITION_POLICY-i-1-erc-*-days-*.out -h | sed 's/^.................//' > ../databases/raw_database.csv
     """
     databases = [
-        ["../databases/fuel_raw_policy.csv", "../databases/fuel_policy.csv"],
-        ["../databases/location_raw_policy.csv", "../databases/location_policy.csv"],
-        ["../databases/intensity_raw_policy.csv", "../databases/intensity_policy.csv"],
-        ["../databases/raw_database.csv", "../databases/database.csv"]
+        ["../databases/fuel_raw_policy.csv",
+         "../databases/fuel_policy.csv",
+         "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_fuel/"],
+        ["../databases/location_raw_policy.csv",
+         "../databases/location_policy.csv",
+         "/nfs/eecs-fserv/share/mcgregse/landscape_summaries_split/"],
+        ["../databases/intensity_raw_policy.csv",
+         "../databases/intensity_policy.csv",
+         "/nfs/eecs-fserv/share/mcgregse/landscape_summaries/"],
+        ["../databases/raw_database.csv",
+         "../databases/database.csv",
+         "/nfs/eecs-fserv/share/mcgregse/landscape_summaries/"]
     ]
     for d in databases:
         print "processing {}".format(d)
-        process_database(d[0], d[1])
+        process_database(d[0], d[1], d[2])
