@@ -65,7 +65,6 @@ target/
 databases/testing/variances.pkl
 *.pcs
 databases/wildfire/database.csv
-databases/wildfire/variances.pkl
 *.DS_Store
 smac-output
 mfmci.iml
