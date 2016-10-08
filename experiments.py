@@ -20,8 +20,8 @@ Please Wait (loading database)
 
 domain_name = "wildfire"
 policy_factory = policy_module.policy_factory
-database_sizes = [60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390]
-database_trajectory_count = 355
+database_sizes = [60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360]
+database_trajectory_count = 360
 
 visualized_variables = ["CrownFirePixels",
                         "SurfaceFirePixels",
@@ -237,16 +237,6 @@ def get_trajectories(policy_name, mfmci):
     return trajectories
 
 
-def _is_included(inclusion_order, trajectory_count, trajectory_id):
-    """
-    :param inclusion_order: The data structure indicating the order of sample inclusion
-    :param trajectory_count: int of the number of trajectories allowed in the database
-    :param trajectory_id: int the id of the trajectory we might add
-    :return:
-    """
-    return trajectory_id in inclusion_order[:trajectory_count]
-
-
 def _get_inclusion_order():
     """
     Get the order of inclusion as a list of random indices.
@@ -277,7 +267,7 @@ def produce_smaller_databases():
 
     def write_row(row, f):
         for idx, col in enumerate(row):
-            f.write(col)
+            f.write(str(col))
             if idx < len(row) - 1:
                 f.write(",")
         f.write("\n")
@@ -295,6 +285,8 @@ def produce_smaller_databases():
     with open("databases/wildfire/database.csv", 'rb') as csv_file:
         transitions = csv.reader(csv_file, delimiter=',')
         row = transitions.next()
+        starts_of_transition_sets = []
+        parsed_rows = []
         for database_size in database_sizes:
             write_row(row, file_references["biased"+str(database_size)])
             write_row(row, file_references["unbiased"+str(database_size)])
@@ -311,24 +303,34 @@ def produce_smaller_databases():
                     action_index = len(column_names) - 1
 
         last = True # ensure it alternates on/off policy
-        transition_set_count = -1
-        for row in transitions:
+        for idx, row in enumerate(transitions):
             parsed_row = map(parse_value, row)
             is_off_policy = int(parsed_row[off_policy_index]) == 1
             assert parsed_row[off_policy_index] == 1 or parsed_row[off_policy_index] == 0
             assert last != is_off_policy
             if not is_off_policy and int(parsed_row[year_index]) == 0:
-                transition_set_count += 1
+                starts_of_transition_sets.append(idx)
             last = is_off_policy
-            for database_size in database_sizes:
-                if not is_off_policy and _is_included(inclusion_order, database_size, transition_set_count):
+            parsed_rows.append(parsed_row)
+
+    for database_size in database_sizes:
+        for transition_set_count, inclusion_idx in enumerate(inclusion_order):
+            current_idx = starts_of_transition_sets[inclusion_idx]
+            while current_idx < len(parsed_rows):
+                parsed_row = parsed_rows[current_idx]
+                is_off_policy = int(parsed_row[off_policy_index]) == 1
+                if not is_off_policy and transition_set_count < database_size:
                     if parsed_row[action_index] == 1:
                         biased_database_includes_suppress_action = True
                     else:
                         biased_database_includes_letburn_action = True
-                    write_row(row, file_references["biased"+str(database_size)])
-                if _is_included(inclusion_order, database_size, transition_set_count):
-                    write_row(row, file_references["unbiased"+str(database_size)])
+                    write_row(parsed_row, file_references["biased"+str(database_size)])
+                if transition_set_count < database_size:
+                    write_row(parsed_row, file_references["unbiased"+str(database_size)])
+                current_idx += 1
+                if current_idx in starts_of_transition_sets:
+                    break
+
     for f_ref in file_references.keys():
         file_references[f_ref].close()
     assert biased_database_includes_suppress_action and biased_database_includes_letburn_action
