@@ -28,8 +28,11 @@ parser.add_argument('domain', metavar='D', type=str, nargs='?',
                     help='the domain to synthesize trajectories for',
                     default='wildfire')
 parser.add_argument('visualize', metavar='V', type=str, nargs='?',
-                    help='What we want to visualize. Options include ',
+                    help='What we want to visualize. Options include surrogate or errr',
                     default='surrogate')
+parser.add_argument('touch', metavar='t', type=str, nargs='?',
+                    help='The name of the file to touch',
+                    default='server_started')
 args = vars(parser.parse_args())
 
 domain_name = args["domain"]
@@ -308,3 +311,4 @@ if __name__ == "__main__":
     print("Starting server...")
     app.run(host='0.0.0.0', port=8938, debug=True, use_reloader=False, threaded=True)
     print("...started")
+    os.utime("servers/" + args["touch"], None)

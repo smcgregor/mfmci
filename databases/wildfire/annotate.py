@@ -145,6 +145,9 @@ def get_smac_url(params):
     :return:
     """
     return "http://localhost:8938/trajectories?Sample+Count=" + str(params["sample_count"]) + \
+           "&Render+Ground+Truth=0" + \
+           "&Use+Location+Policy=0" + \
+           "&Use+Landscape+Policy=0" + \
            "&Horizon=" + str(params["horizon"]) + \
            "&ERC+Threshold=" + str(params["erc"]) + \
            "&Days+Until+End+of+Season+Threshold=" + str(params["days"])
@@ -181,15 +184,15 @@ def reward_function(data):
         "ponderosaSC2": 5,
         "ponderosaSC3": 35,
         "ponderosaSC4": 45,
-        "ponderosaSC5": 5,
-        "mixedConSC1": 10, # todo: we don't care about the RI of the non-pondersoa species
-        "mixedConSC2": 5,
-        "mixedConSC3": 30,
-        "mixedConSC4": 45,
-        "mixedConSC5": 10,
-        "lodgepoleSC1": 25,
-        "lodgepoleSC2": 55,
-        "lodgepoleSC3": 20
+        "ponderosaSC5": 5#,
+        #"mixedConSC1": 10, # We don't care about the RI of the non-pondersoa species
+        #"mixedConSC2": 5,
+        #"mixedConSC3": 30,
+        #"mixedConSC4": 45,
+        #"mixedConSC5": 10,
+        #"lodgepoleSC1": 25,
+        #"lodgepoleSC2": 55,
+        #"lodgepoleSC3": 20
     }
 
 
