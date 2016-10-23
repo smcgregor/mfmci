@@ -9,6 +9,7 @@ This is a minimal server for using MFMCi to serve your domain.
 from MFMCi import MFMCi
 import csv
 import databases.wildfire.policies as policy_module
+import databases.wildfire.annotate as annotate_module
 import numpy as np
 
 
@@ -22,28 +23,6 @@ domain_name = "wildfire"
 policy_factory = policy_module.policy_factory
 database_sizes = [60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360]
 database_trajectory_count = 360
-
-visualized_variables = ["CrownFirePixels",
-                        "SurfaceFirePixels",
-                        "fireSuppressionCost",
-                        "timberLoss_IJWF",
-                        "ponderosaSC1",
-                        "ponderosaSC2",
-                        "ponderosaSC3",
-                        "ponderosaSC4",
-                        "ponderosaSC5",
-                        "lodgepoleSC1",
-                        "lodgepoleSC2",
-                        "lodgepoleSC3",
-                        "mixedConSC1",
-                        "mixedConSC2",
-                        "mixedConSC3",
-                        "mixedConSC4",
-                        "mixedConSC5",
-                        "boardFeetHarvestPonderosa",
-                        "boardFeetHarvestLodgepole",
-                        "boardFeetHarvestMixedConifer"
-                        ]
 
 def _get_variable_height(variable_name, mc_trajectories):
     """
@@ -77,12 +56,12 @@ def get_objective(mc_trajectories, mfmc_trajectories):
 
     # get height of each variable
     heights = {}
-    for v in visualized_variables:
+    for v in annotate_module.OBJECTIVE_VARIABLES:
         heights[v] = _get_variable_height(v, mc_trajectories)
 
     # get each quantile and time step error for each variable, sum and return
     error = 0
-    for v in visualized_variables:
+    for v in annotate_module.OBJECTIVE_VARIABLES:
         for t in range(0,99):
             actual = _get_quantile(0.5, v, t, mc_trajectories)
             synthesized = _get_quantile(0.5, v, t, mfmc_trajectories)
@@ -127,7 +106,7 @@ def get_monte_carlo_trajectories(policy_name):
         transitionsReader = csv.DictReader(csvfile)
         transitions = list(transitionsReader)
         for idx, transitionDictionary in enumerate(transitions):
-            if int(transitionDictionary["offPolicy"]) == 1:
+            if int(transitionDictionary["onPolicy"]) == 0:
                 continue
             if len(trajectory) > 0:
                 assert int(trajectory[-1]["year"]) == int(transitionDictionary["year"]) - 1
@@ -144,7 +123,8 @@ def baseline():
     evaluating the performance.
     :return:
     """
-    policies = ["location", "intensity", "landscape"]
+    #policies = ["location", "intensity", "landscape"]
+    policies = ["location"]
     replicates = 100
     mc_trajectories = {}
     for policy in policies:
@@ -167,23 +147,40 @@ def experiment():
     results for the policy against the Monte Carlo policy.
     :return:
     """
-    policies = ["location", "intensity", "landscape"]
+    policies = ["intensity", "landscape", "location"]
     mc_trajectories = {}
+
     for policy in policies:
         mc_trajectories[policy] = get_monte_carlo_trajectories(policy)
     for database_size in database_sizes:
         # MFMCi
-        mfmci = MFMCi(domain_name,
-                      database_file_name="databases/wildfire/experimental/unbiased" + str(database_size) + ".csv",
-                      include_exogenous=False)
+        mfmci = MFMCi(database_path="databases/wildfire/experimental/unbiased" + str(database_size) + ".csv",
+                      normalization_database="databases/wildfire/database.csv",
+                      possible_actions=annotate_module.POSSIBLE_ACTIONS,
+                      visualization_variables=annotate_module.OBJECTIVE_VARIABLES,
+                      pre_transition_variables=annotate_module.PRE_TRANSITION_VARIABLES,
+                      post_transition_variables=annotate_module.POST_TRANSITION_VARIABLES,
+                      process_row=annotate_module.PROCESS_ROW,
+                      non_stationary=True)
         # MFMCi with exogenous
-        mfmci_exogenous = MFMCi(domain_name,
-                                database_file_name="databases/wildfire/experimental/unbiased" + str(database_size) + ".csv",
-                                include_exogenous=True)
+        mfmci_exogenous = MFMCi(database_path="databases/wildfire/experimental/unbiased" + str(database_size) + ".csv",
+                                normalization_database="databases/wildfire/database.csv",
+                                possible_actions=annotate_module.POSSIBLE_ACTIONS,
+                                visualization_variables=annotate_module.OBJECTIVE_VARIABLES,
+                                pre_transition_variables=annotate_module.PRE_TRANSITION_EXOGENOUS_VARIABLES,
+                                post_transition_variables=annotate_module.POST_TRANSITION_EXOGENOUS_VARIABLES,
+                                process_row=annotate_module.PROCESS_ROW,
+                                non_stationary=True)
         # MFMCi without bias correction
-        mfmci_biased = MFMCi(domain_name,
-                             database_file_name="databases/wildfire/experimental/biased" + str(database_size) + ".csv",
-                             include_exogenous=False)
+        mfmci_biased = MFMCi(database_path="databases/wildfire/experimental/biased" + str(database_size) + ".csv",
+                             normalization_database="databases/wildfire/database.csv",
+                             possible_actions=annotate_module.POSSIBLE_ACTIONS,
+                             visualization_variables=annotate_module.OBJECTIVE_VARIABLES,
+                             pre_transition_variables=annotate_module.PRE_TRANSITION_VARIABLES,
+                             post_transition_variables=annotate_module.POST_TRANSITION_VARIABLES,
+                             process_row=annotate_module.PROCESS_ROW,
+                             non_stationary=True)
+
         for policy in policies:
             policy_mc_trajectories = mc_trajectories[policy]
             mfmci_trajectories = get_trajectories(policy, mfmci)
@@ -295,8 +292,8 @@ def produce_smaller_databases():
             if headerValue:
                 h = headerValue.strip()
                 column_names.append(h)
-                if h == "offPolicy":
-                    off_policy_index = len(column_names) - 1
+                if h == "onPolicy":
+                    on_policy_index = len(column_names) - 1
                 elif h == "year":
                     year_index = len(column_names) - 1
                 elif h == "action":
@@ -305,12 +302,12 @@ def produce_smaller_databases():
         last = True # ensure it alternates on/off policy
         for idx, row in enumerate(transitions):
             parsed_row = map(parse_value, row)
-            is_off_policy = int(parsed_row[off_policy_index]) == 1
-            assert parsed_row[off_policy_index] == 1 or parsed_row[off_policy_index] == 0
-            assert last != is_off_policy
-            if not is_off_policy and int(parsed_row[year_index]) == 0:
+            is_on_policy = int(parsed_row[on_policy_index]) == 1
+            assert parsed_row[on_policy_index] == 1 or parsed_row[on_policy_index] == 0
+            assert last != is_on_policy
+            if not is_on_policy and int(parsed_row[year_index]) == 0:
                 starts_of_transition_sets.append(idx)
-            last = is_off_policy
+            last = is_on_policy
             parsed_rows.append(parsed_row)
 
     for database_size in database_sizes:
@@ -318,8 +315,8 @@ def produce_smaller_databases():
             current_idx = starts_of_transition_sets[inclusion_idx]
             while current_idx < len(parsed_rows):
                 parsed_row = parsed_rows[current_idx]
-                is_off_policy = int(parsed_row[off_policy_index]) == 1
-                if not is_off_policy and transition_set_count < database_size:
+                is_on_policy = int(parsed_row[on_policy_index]) == 1
+                if is_on_policy and transition_set_count < database_size:
                     if parsed_row[action_index] == 1:
                         biased_database_includes_suppress_action = True
                     else:
