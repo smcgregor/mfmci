@@ -77,6 +77,12 @@ OBJECTIVE_VARIABLES = [
     "lodgepoleSC3"
 ]
 
+# How far in the future should we expect to have results
+OBJECTIVE_HORIZON = 99
+
+# The number of trajectories to generate in evaluating the quantile
+OBJECTIVE_TRAJECTORY_COUNT = 30
+
 # All the variables we visualize
 VISUALIZATION_VARIABLES = [
     "on policy",
