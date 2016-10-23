@@ -72,3 +72,5 @@ mfmci.iml
 .idea
 biased*.csv
 unbiased*.csv
+*.bak
+*.variances.pkl
