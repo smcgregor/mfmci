@@ -13,11 +13,14 @@ import importlib
 import subprocess
 import os
 import argparse
+import csv
 
 print """
 Starting Flask Server...
 Note, you may be able to specify a domain at this point by adding it as a
 positional argument. For examples: `python flask_server.py wildfire`.
+
+Please Wait (loading database)
 """
 
 parser = argparse.ArgumentParser(description='Start the MFMCi server.')
@@ -27,11 +30,19 @@ parser.add_argument('domain', metavar='D', type=str, nargs='?',
 args = vars(parser.parse_args())
 
 domain_name = args["domain"]
-mfmci = MFMCi(domain_name)
+annotate_module = importlib.import_module("databases." + domain_name + ".annotate")
+initialization_object = annotate_module.mdpvis_initialization_object
+mfmci = MFMCi(database_path="databases/{}/database.fixed.csv".format(domain_name),
+              normalization_database="databases/wildfire/database.csv",
+              possible_actions=annotate_module.POSSIBLE_ACTIONS,
+              visualization_variables=annotate_module.VISUALIZATION_VARIABLES,
+              pre_transition_variables=annotate_module.PRE_TRANSITION_VARIABLES,
+              post_transition_variables=annotate_module.POST_TRANSITION_VARIABLES,
+              process_row=annotate_module.PROCESS_ROW,
+              non_stationary=True)
+
 policy_module = importlib.import_module("databases." + domain_name + ".policies")
 policy_factory = policy_module.policy_factory
-annotations = importlib.import_module("databases." + domain_name + ".annotate")
-initialization_object = annotations.mdpvis_initialization_object
 
 app = Flask('mfmci', static_folder='.', static_url_path='')
 

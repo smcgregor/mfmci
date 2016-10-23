@@ -9,7 +9,7 @@ class TransitionTuple(tuple):
         """
         :param cls: The _new_ constructor's version of `self`
         :param preStateDistanceMetricVariables: The state we might stitch to, this is also represented as a tuple.
-          These include the action indicators.
+          These can include action indicators.
         :param is_terminal: An indicator for whether the transitioned to state is terminal.
         :param is_initial: An indicator for whether the pre-transition state is an initial state.
         :param possible_actions: What actions can be taken in the resulting state.
@@ -34,7 +34,9 @@ class TransitionTuple(tuple):
             "state summary variables": state_summary_variables,
             "additional variables": additional_variables
         }
-        assert action not in self.results
+        assert action not in self.results,\
+            "action {} already in TransitionTuple {}".format(action,
+                                                             self.preStateDistanceMetricVariables)
         self.results[action] = result
 
     def has_all_actions(self):
