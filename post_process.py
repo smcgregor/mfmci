@@ -297,6 +297,60 @@ def test_check_for_incomplete_pickles():
             file_number += 1
 
 
+def fix_databases(database_input_path, database_output_path):
+    """
+    The old database generator improperly determined the off-policy Markov state by looking back two rows instead
+    of just one. This function fixed the incorrect database. Since I fixed the databases
+    and the database processing script, this function is now deprecated.
+    :param database_input_path:
+    :param database_output_path:
+    :return:
+    """
+    # Each of these variables need a "start" value and an "end" value pulled from the subsequent state
+    landscape_summary_names = [
+        "Fuel Model",  # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
+        "Canopy Closure",
+        "Canopy Height",
+        "Canopy Base Height",
+        "Canopy Bulk Density",
+        "Covertype",
+        "Stand Density Index",
+        "Succession Class",
+        "Maximum Time in State",
+        "Stand Volume Age",
+        "highFuel",
+        "modFuel",
+        "lowFuel",
+        "percentHighFuel"
+    ]
+    out = file(database_output_path, "w")
+    with open(database_input_path, 'rb') as csvfile:
+        transitions_reader = csv.DictReader(csvfile)
+        transitions = list(transitions_reader)
+        for header in transitions_reader.fieldnames:
+            out.write(header + ",")
+        out.write("\n")
+        for idx, transitionDictionary in enumerate(transitions):
+            on_policy = int(float(transitionDictionary["onPolicy"])) == 1
+            year = transitionDictionary["year"]
+            for header in transitions_reader.fieldnames:
+                if int(float(year)) == 0:
+                    out.write(transitionDictionary[header] + ",")
+                else:
+                    if not on_policy:
+                        true_value = False
+                        for fix in landscape_summary_names:
+                            if fix + " start" == header:
+                                true_value = transitions[idx-1][fix + " end"]
+                        if type(true_value) == bool:
+                            out.write(transitionDictionary[header] + ",")
+                        else:
+                            out.write(true_value + ",")
+                    else:
+                        out.write(transitionDictionary[header] + ",")
+            out.write("\n")
+
+
 def process_database(database_input_path, database_output_path, landscape_summary_path):
 
     initial_landscape_description = [
@@ -428,6 +482,7 @@ def process_database(database_input_path, database_output_path, landscape_summar
         for idx, transitionDictionary in enumerate(transitions):
 
             year = int(transitionDictionary["year"])
+            on_policy = int(transitionDictionary["onPolicy"])
 
             # We can't render year 100 because there is no fire experienced at that year
             if year == 99:
@@ -437,7 +492,10 @@ def process_database(database_input_path, database_output_path, landscape_summar
             if year == 0:
                 current_lcp_summary = initial_landscape_description
             else:
-                current_lcp_summary = get_landscape_summary(transitions[idx - 2]["lcpFileName"])
+                if on_policy:
+                    current_lcp_summary = get_landscape_summary(transitions[idx - 2]["lcpFileName"])
+                else:
+                    current_lcp_summary = get_landscape_summary(transitions[idx - 1]["lcpFileName"])
 
             # Write the lcp's summary to the "start" portion
             for entry in current_lcp_summary:
