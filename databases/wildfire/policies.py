@@ -12,11 +12,21 @@ def policy_factory(parameter_dictionary):
     erc_threshold = int(parameter_dictionary["ERC Threshold"])
     time_until_end_of_fire_season_threshold = int(parameter_dictionary["Days Until End of Season Threshold"])
 
+    def on_policy(transition_tuple=None):
+        assert transition_tuple is not None
+        for action in transition_tuple.results.keys():
+            if transition_tuple.results[action]["additional variables"]["on policy"] == 1.0:
+                return int(action)
+        assert False
+    #return on_policy
+
     def policy_location(transition_tuple=None):
         assert transition_tuple is not None
         additional_state = transition_tuple.get_additional_state()
         location = int(additional_state["ignitionLocation"]) % 940
         assert location >= 0, "Location was {}".format(location)
+        if int(additional_state["IgnitionCount"] > 1):
+            return 1
         if location < 470:
             return 1
         else:
@@ -49,7 +59,7 @@ def policy_factory(parameter_dictionary):
 
     def policy_fuels(transition_tuple=None):
         additional_state = transition_tuple.get_additional_state()
-        if float(additional_state["highFuelPercent"]) > 0.20:
+        if float(additional_state["percentHighFuel start"]) > 0.30:
             return 1
         else:
             return 0
