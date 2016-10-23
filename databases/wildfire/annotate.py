@@ -3,137 +3,90 @@ from PIL import Image
 import StringIO
 from struct import unpack
 import bz2
-import csv
 
-harvest_priority_rows = [119, 136, 159, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # use range(1, 174) to include all of them
+#harvest_priority_rows = [119, 136, 159, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # use range(1, 174) to include all of them
+#harvest_priority_rows = [119, 136, 159, 103, 167, 120, 22]
+#harvest_priority_rows = [162, 164, 167, 170, 173, 158, 159, 160, 161, 165, 9, 169]
+harvest_priority_rows = []
+
+# Variables used in all the distance metrics
+common_distance_variables = [
+    #"Fuel Model",
+    "Canopy Closure",
+    "Canopy Height",
+    "Canopy Base Height",
+    "Canopy Bulk Density",
+    #"Covertype",
+    "Stand Density Index",
+    #"Succession Class",
+    #"Maximum Time in State",
+    "Stand Volume Age",
+    "highFuel",
+    #"modFuel",
+    #"lowFuel",
+    "time step"
+]
+
+# Variables only used in the exogenous distance metrics
+common_exogenous_variables = [
+    "Precipitation",
+    "MaxTemperature",
+    "MinHumidity",
+    "WindSpeed",
+    "ignitionCovertype",
+    "ignitionSlope",
+    "startIndex",
+    "ERC",
+    "SC"
+]
 
 # All the variables that are used in the distance metric
-PRE_TRANSITION_VARIABLES = [
-    #"Fuel Model start", # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
-    #"Canopy Closure start",
-    #"Canopy Height start",
-    #"Canopy Base Height start",
-    #"Canopy Bulk Density start",
-    #"Covertype start",
-    #"Stand Density Index start",
-    #"Succession Class start",
-    #"Maximum Time in State start",
-    #"Stand Volume Age start",#,
-    #"highFuel start",
-    #"modFuel start",
-    #"lowFuel start",
-
-    "year start"
-
-    #"Precipitation start",
-    #"MaxTemperature start",
-    #"MinHumidity start",
-    #"WindSpeed start",
-    #"ignitionCovertype start",
-    #"ignitionSlope start",
-    #"startIndex start",
-    #"endIndex start",
-    #"ERC start",
-    #"SC start"
-]
+PRE_TRANSITION_VARIABLES = [i + " start" for i in common_distance_variables]
 harvest_summary_names_start = ["PriorityRow" + str(i) + " start" for i in harvest_priority_rows]
 PRE_TRANSITION_VARIABLES += harvest_summary_names_start
-
-PRE_TRANSITION_EXOGENOUS_VARIABLES = [
-    #"Fuel Model start", # \/ pulled from the landscape summary of the prior time step's onPolicy landscape
-    #"Canopy Closure start",
-    #"Canopy Height start",
-    #"Canopy Base Height start",
-    #"Canopy Bulk Density start",
-    #"Covertype start",
-    #"Stand Density Index start",
-    #"Succession Class start",
-    #"Maximum Time in State start",
-    #"Stand Volume Age start",
-    #"highFuel start",
-    #"modFuel start",
-    #"lowFuel start",
-
-    "year start",
-
-    "Precipitation start",
-    "MaxTemperature start",
-    "MinHumidity start",
-    "WindSpeed start",
-    "ignitionCovertype start",
-    "ignitionSlope start",
-    "startIndex start",
-    "ERC start",
-    "SC start"
-]
-PRE_TRANSITION_EXOGENOUS_VARIABLES += harvest_summary_names_start
+PRE_TRANSITION_EXOGENOUS_VARIABLES = PRE_TRANSITION_VARIABLES + [i + " start" for i in common_exogenous_variables]
 
 # The variables that correspond to the variables in PRE_TRANSITION_VARIABLES
-POST_TRANSITION_VARIABLES = [
-    #"Fuel Model end", # \/ pulled from the landscape summary of the current row
-    #"Canopy Closure end",
-    #"Canopy Height end",
-    #"Canopy Base Height end",
-    #"Canopy Bulk Density end",
-    #"Covertype end",
-    #"Stand Density Index end",
-    #"Succession Class end",
-    #"Maximum Time in State end",
-    #"Stand Volume Age end",#,
-    #"highFuel end",
-    #"modFuel end",
-    #"lowFuel end",
-
-    "year end"
-
-    #"Precipitation end",
-    #"MaxTemperature end",
-    #"MinHumidity end",
-    #"WindSpeed end",
-    #"ignitionCovertype end",
-    #"ignitionSlope end",
-    #"startIndex end",
-    #"endIndex end",
-    #"ERC end",
-    #"SC end"
-]
+POST_TRANSITION_VARIABLES = [i + " end" for i in common_distance_variables]
 harvest_summary_names_end = ["PriorityRow" + str(i) + " end" for i in harvest_priority_rows]
 POST_TRANSITION_VARIABLES += harvest_summary_names_end
 
 # The variables that correspond to the variables in PRE_TRANSITION_VARIABLES
-POST_TRANSITION_EXOGENOUS_VARIABLES = [
-    #"Fuel Model end", # \/ pulled from the landscape summary of the current row
-    #"Canopy Closure end",
-    #"Canopy Height end",
-    #"Canopy Base Height end",
-    #"Canopy Bulk Density end",
-    #"Covertype end",
-    #"Stand Density Index end",
-    #"Succession Class end",
-    #"Maximum Time in State end",
-    #"Stand Volume Age end",
-    #"highFuel end",
-    #"modFuel end",
-    #"lowFuel end",
-
-    "year end",
-
-    "Precipitation end",
-    "MaxTemperature end",
-    "MinHumidity end",
-    "WindSpeed end",
-    "ignitionCovertype end",
-    "ignitionSlope end",
-    "startIndex end",
-    "ERC end",
-    "SC end"
-]
-POST_TRANSITION_EXOGENOUS_VARIABLES += harvest_summary_names_end
+POST_TRANSITION_EXOGENOUS_VARIABLES = POST_TRANSITION_VARIABLES + [i + " end" for i in common_exogenous_variables]
 
 # All the variables we visualize
-STATE_SUMMARY_VARIABLES = [
+OBJECTIVE_VARIABLES = [
+    "CrownFirePixels",
+    "SurfaceFirePixels",
+    "fireSuppressionCost",
+    "boardFeetHarvestPonderosa",
+    "boardFeetHarvestLodgepole",
+    "boardFeetHarvestMixedConifer",
+    "ponderosaSC1",
+    "ponderosaSC2",
+    "ponderosaSC3",
+    "ponderosaSC4",
+    "ponderosaSC5",
+    "mixedConSC1",
+    "mixedConSC2",
+    "mixedConSC3",
+    "mixedConSC4",
+    "mixedConSC5",
+    "lodgepoleSC1",
+    "lodgepoleSC2",
+    "lodgepoleSC3"
+]
+
+# All the variables we visualize
+VISUALIZATION_VARIABLES = [
+    "on policy",
+    "time step",
+    "stitched policy ERC",
+    "stitched policy Days",
+    "on policy",
+    "percentHighFuel start",
     #"offPolicy",
-    #"action",
+    "action",
     "CrownFirePixels",
     "SurfaceFirePixels",
     "fireSuppressionCost",
@@ -156,6 +109,7 @@ STATE_SUMMARY_VARIABLES = [
     "lodgepoleSC2",
     "lodgepoleSC3"
 ]
+VISUALIZATION_VARIABLES = VISUALIZATION_VARIABLES + ["PriorityRow" + str(i) + " start" for i in range(1, 174)]
 
 # All the actions that are possible
 POSSIBLE_ACTIONS = [
@@ -316,17 +270,21 @@ def PROCESS_ROW(additional_state):
     :param additional_state:
     :return:
     """
-    additional_state["on policy"] = additional_state["offPolicy"] == 0
+    additional_state["on policy"] = additional_state["onPolicy"]
     additional_state["time step"] = additional_state["year"]
+    additional_state["time step start"] = additional_state["year"]
+    additional_state["time step end"] = int(additional_state["year"]) + 1
     additional_state["trajectory identifier"] = additional_state["initialFire"]
 
-    policy_parameters = additional_state["lcpFileName"].split("_")[4:6]
-    policy_parameter_erc = policy_parameters[0]
-    policy_parameter_day = policy_parameters[1]
-
-    additional_state["stitched policy ERC"] = float(policy_parameters[0])
-    additional_state["stitched policy Days"] = float(policy_parameters[1])
-
+    if "../landscapes/lcp_" in additional_state["lcpFileName"]:
+        policy_parameters = additional_state["lcpFileName"].split("_")[4:6]
+        policy_parameter_erc = policy_parameters[0]
+        policy_parameter_day = policy_parameters[1]
+    else:
+        policy_parameter_erc = 0.0
+        policy_parameter_day = 0.0
+    additional_state["stitched policy ERC"] = float(policy_parameter_erc)
+    additional_state["stitched policy Days"] = float(policy_parameter_day)
     additional_state["policy identifier"] = "{}-{}" \
         .format(policy_parameter_erc, policy_parameter_day)
 
