@@ -311,4 +311,5 @@ if __name__ == "__main__":
     print("Starting server...")
     app.run(host='0.0.0.0', port=8938, debug=True, use_reloader=False, threaded=True)
     print("...started")
-    os.utime("servers/" + args["touch"], None)
+    with open("servers/" + args["touch"], 'w') as touched:
+        pass

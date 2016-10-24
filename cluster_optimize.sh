@@ -54,12 +54,12 @@ do
     echo '#$ -l hostname='"$hostnames">> $g
 
     # Start the server
-    echo $PYTHONPATH "-t $uuid">> $g
+    echo $PYTHONPATH "flask_server.py wildfire surrogate $uuid">> $g
 
     # Wait for the server to start
     echo "while [ ! -f servers/$uuid ]">> $g
     echo 'do'>> $g
-    echo  'sleeping for 10'>> $g
+    echo  'echo "sleeping for 10"'>> $g
     echo  'sleep 10'>> $g
     echo 'done'>> $g
 
