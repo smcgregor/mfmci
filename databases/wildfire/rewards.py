@@ -17,6 +17,7 @@ def reward_factory(parameter_dictionary):
     airshed_smoke_reward_per_day = -1000.0
     recreation_index_dollars = 1.0
     suppression_expense_scale = 1.0
+    discount = 0.96
 
     keys = parameter_dictionary.keys()
     if "restoration index dollars" in keys:
@@ -33,6 +34,8 @@ def reward_factory(parameter_dictionary):
         restoration_index_dollars = float(parameter_dictionary["recreation index dollars"])
     if "suppression expense dollars" in keys:
         restoration_index_dollars = float(parameter_dictionary["suppression expense dollars"])
+    if "discount" in keys:
+        discount = float(parameter_dictionary["discount"])
 
     def reward_function(data,
                         restoration_index_dollars = restoration_index_dollars,
@@ -41,7 +44,8 @@ def reward_factory(parameter_dictionary):
                         lodgepole_price_per_bf = lodgepole_price_per_bf,
                         airshed_smoke_reward_per_day = airshed_smoke_reward_per_day,
                         recreation_index_dollars = recreation_index_dollars,
-                        suppression_expense_scale = suppression_expense_scale):
+                        suppression_expense_scale = suppression_expense_scale,
+                        discount = discount):
         """
 
         :param data: The transitions we are assessing reward on
@@ -150,14 +154,13 @@ def reward_factory(parameter_dictionary):
         recreation_index_total = 0.0
         suppression_expense_total = 0.0
         for trajectory in data["trajectories"]:
-            for time_step in trajectory:
-                print time_step.keys()
+            for idx, time_step in enumerate(trajectory):
                 restoration_index_total += restoration_index_reward(time_step)
                 harvest_total += harvest_reward(time_step)
                 airshed_total += airshed_reward(time_step)
                 recreation_index_total += recreation_index_reward(time_step)
                 suppression_expense_total += suppression_expense_reward(time_step)
         total = (harvest_total + restoration_index_total +
-                 airshed_total + recreation_index_total + suppression_expense_total)
+                 airshed_total + recreation_index_total + suppression_expense_total) * math.pow(discount, idx)
         return total
     return reward_function
