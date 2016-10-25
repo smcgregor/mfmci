@@ -1,6 +1,8 @@
 import math
 from PIL import Image
 import StringIO
+import importlib
+import glob
 from struct import unpack
 import bz2
 
@@ -113,7 +115,9 @@ VISUALIZATION_VARIABLES = [
     "mixedConSC5",
     "lodgepoleSC1",
     "lodgepoleSC2",
-    "lodgepoleSC3"
+    "lodgepoleSC3",
+    "startIndex",
+    "endIndex"
 ]
 VISUALIZATION_VARIABLES = VISUALIZATION_VARIABLES + ["PriorityRow" + str(i) + " start" for i in range(1, 174)]
 
@@ -166,53 +170,6 @@ def post_process_smac_output(last_row):
         }
     return ret_params
 
-def reward_function(data):
-    """
-    Calculate the rewards for the trajectories.
-    todo: set the parameters of the reward function from the visualization.
-    :param data:
-    :return:
-    """
-    restoration_index_dollars = 1.0
-    ponderosa_price_per_bf = 1.0
-    mixed_conifer_price_per_bf = 1.0
-    lodgepole_price_per_bf = 1.0
-
-    # Real values
-    restoration_index_targets = {
-        "ponderosaSC1": 10,
-        "ponderosaSC2": 5,
-        "ponderosaSC3": 35,
-        "ponderosaSC4": 45,
-        "ponderosaSC5": 5#,
-        #"mixedConSC1": 10, # We don't care about the RI of the non-pondersoa species
-        #"mixedConSC2": 5,
-        #"mixedConSC3": 30,
-        #"mixedConSC4": 45,
-        #"mixedConSC5": 10,
-        #"lodgepoleSC1": 25,
-        #"lodgepoleSC2": 55,
-        #"lodgepoleSC3": 20
-    }
-
-
-    def compute_restoration_index(time_step):
-        """
-        Compute the squared deviation from the targets for the succession classes.
-        """
-        total = 0.0
-        for k in restoration_index_targets:
-            total += math.pow(restoration_index_targets[k] - time_step[k], 2)
-        return total
-
-    harvest_total = 0
-    restoration_index_total = 0.0
-    for trajectory in data["trajectories"]:
-        for time_step in trajectory:
-            restoration_index_total += compute_restoration_index(time_step) * restoration_index_dollars
-            #harvest_total +=  # todo: incorporate harvest totals
-    total = -(harvest_total + restoration_index_total)
-    return total
 
 def get_image(image_file_name):
     """
@@ -332,113 +289,14 @@ mdpvis_initialization_object = {
                 "href": "todo"
             }
         ]
-    },
-
-    # The control panels that appear at the top of the screen
-    "parameter_collections": [
-        {
-            "panel_title": "Optimization",
-            "panel_icon": "glyphicon-king",
-            "panel_description": "Define the parameters of the optimization algorithm.",
-            "default_rendering": "radar", # Default to a radar plot. User can switch to input elements.
-            "quantitative": [  # Real valued parameters
-                               {
-                                   "name": "Number of Runs Limit",
-                                   "description": "The number of policy evaluations",
-                                   "current_value": 10,
-                                   "max": 40,
-                                   "min": 1,
-                                   "step": 1,
-                                   "units": "Unitless"
-                               }
-            ]
-        },
-        {
-            "panel_title": "Policy",
-            "panel_icon": "glyphicon-random",
-            "panel_description": "Define the parameters of the policies used to generate trajectories.",
-            "default_rendering": "radar", # Default to a radar plot. User can switch to input elements.
-            "quantitative": [  # Real valued parameters
-                {
-                    "name": "Use Location Policy",
-                    "description": "Use a policy that splits the landscape geographically",
-                    "current_value": 0,
-                    "max": 1,
-                    "min": 0,
-                    "step": 1,
-                    "units": "boolean"
-                },
-                {
-                    "name": "Use Landscape Policy",
-                    "description": "Use a policy based on the total fuels on the landscape",
-                    "current_value": 0,
-                    "max": 1,
-                    "min": 0,
-                    "step": 1,
-                    "units": "boolean"
-                },
-                {
-                    "name": "ERC Threshold",
-                    "description": "Values of Energy Release Component greater than " +
-                                   "this parameter will be suppressed (up to the value of 95)",
-                    "current_value": 65,
-                    "max": 95,
-                    "min": 0,
-                    "step": 1,
-                    "units": "Unitless"
-                },
-                {
-                    "name": "Days Until End of Season Threshold",
-                    "description": "Values of Ignition Day less than this parameter will " +
-                                   "be suppressed if the ERC parameter is in the suppressable range",
-                    "current_value": 100,
-                    "max": 180,
-                    "min": 0,
-                    "step": 1,
-                    "units": "Days"
-                }
-            ],
-            "categorical": [  # Discrete valued parameters, uses drop down or radar buttons for selection
-                              {"Policy Class": ["severity", "location"]}
-            ]
-        },
-        {
-            "panel_title": "Sampling Effort",
-            "panel_icon": "glyphicon-retweet",
-            "panel_description": "Define how many trajectories you want to generate, and to what time horizon.",
-            "default_rendering": "radar", # Default to a radar plot. User can switch to input elements.
-            "quantitative": [  # Real valued parameters
-                               {
-                                   "name": "Sample Count",
-                                   "description": "Specify how many trajectories to generate",
-                                   "current_value": 10,
-                                   "max": 80,
-                                   "min": 1,
-                                   "step": 1,
-                                   "units": "#"
-                               },
-                               {
-                                   "name": "Horizon",
-                                   "description": "The time step at which simulation terminates",
-                                   "current_value": 10,
-                                   "max": 100,
-                                   "min": 1,
-                                   "step": 1,
-                                   "units": "Years"
-                               },
-                               {
-                                   "name": "Render Ground Truth",
-                                   "description": "Render the Monte Carlo trajectories instead of the MFMCi trajectories",
-                                   "current_value": 0,
-                                   "max": 1,
-                                   "min": 0,
-                                   "step": 1,
-                                   "units": ""
-                               }
-            ],
-            "categorical": [  # Discrete valued parameters, uses drop down or radar buttons for selection
-                              {"Policy Class": ["severity", "location"]}
-            ]
-        }
-    ]
+    }
 }
+mdpvis_initialization_object["parameter_collections"] = []
+panel_files = glob.glob("databases/wildfire/panels/*.py")
+for panel_file in panel_files:
+    panel_file = panel_file.split("/")[-1]
+    if panel_file == "__init__.py":
+        continue
+    pf = panel_file.split(".")[0]
+    panel_module = importlib.import_module("databases.wildfire.panels." + pf)
+    mdpvis_initialization_object["parameter_collections"].append(panel_module.panel)

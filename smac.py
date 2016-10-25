@@ -31,13 +31,16 @@ for i in range(len(sys.argv)-1):
         params[sys.argv[i].strip("-")] = sys.argv[i+1]
 
 annotations = importlib.import_module("databases." + params["domain"] + ".annotate")
+reward_module = importlib.import_module("databases." + params["domain"] + ".rewards")
 
-params["sample_count"] = params["count"]  # todo: specify sample count and horizon from parameters
+params["sample_count"] = params["count"]
 params["horizon"] = params["horizon"]
 url = annotations.get_smac_url(params)
 
+reward_function = reward_module.reward_factory({}) #  todo: specify the reward function from parameters
+
 data = json.load(urllib2.urlopen(url))
-total = annotations.reward_function(data)
+total = reward_function(data)
 
 # SMAC has a few different output fields; here, we only need the 4th output:
 print "Result for SMAC: SUCCESS, 0, 0, {}, 0".format(total)

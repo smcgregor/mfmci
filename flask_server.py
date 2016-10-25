@@ -315,5 +315,4 @@ if __name__ == "__main__":
         pass
     app.run(host='0.0.0.0', port=8938, debug=False, use_reloader=False, threaded=True)
     #app.run(host='0.0.0.0', port=8938, debug=True, use_reloader=False, threaded=True)
-    print("...started")
-
+    print("Server stopped")
