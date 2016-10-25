@@ -54,7 +54,7 @@ do
     echo '#$ -l hostname='"$hostnames">> $g
 
     # Start the server
-    echo $PYTHONPATH "flask_server.py wildfire surrogate $uuid">> $g
+    echo $PYTHONPATH "flask_server.py wildfire surrogate $uuid $PYTHONPATH &">> $g
 
     # Wait for the server to start
     echo "while [ ! -f servers/$uuid ]">> $g
@@ -64,7 +64,7 @@ do
     echo 'done'>> $g
 
     # Ask for the optimization
-    echo "curl http://localhost:8938/optimize?Sample%20Count=30&Horizon=99&Render%20Ground%20Truth=0&Use%20Location%20Policy=0&Use%20Landscape%20Policy=0&ERC%20Threshold=71&Days%20Until%20End%20of%20Season%20Threshold=51&Number%20of%20Runs%20Limit=500">> $g
+    echo 'curl "http://localhost:8938/optimize?Sample%20Count=30&Horizon=99&Render%20Ground%20Truth=0&Use%20Location%20Policy=0&Use%20Landscape%20Policy=0&ERC%20Threshold=71&Days%20Until%20End%20of%20Season%20Threshold=51&Number%20of%20Runs%20Limit=500"'>> $g
 
     qsub $g
     sleep 1

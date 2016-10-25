@@ -33,6 +33,8 @@ parser.add_argument('visualize', metavar='V', type=str, nargs='?',
 parser.add_argument('touch', metavar='t', type=str, nargs='?',
                     help='The name of the file to touch',
                     default='server_started')
+parser.add_argument('python', metavar='P', type=str, nargs='?',
+                    default='python')
 args = vars(parser.parse_args())
 
 domain_name = args["domain"]
@@ -271,7 +273,7 @@ def cross_origin_optimize():
 
     annotate_module.write_smac_parameters(request.args)
     subprocess.call(
-        ['./smac/smac --use-instances false --numberOfRunsLimit ' + str(runs_limit) + ' --pcs-file smac.pcs --algo "python smac.py -domain ' + domain_name + ' -count ' + str(count) + ' -horizon ' + str(horizon) + '" --run-objective QUALITY --rungroup optimizations --seed 1'],
+        ['./smac/smac --use-instances false --numberOfRunsLimit ' + str(runs_limit) + ' --pcs-file smac.pcs --algo "' + args["python"] + ' smac.py -domain ' + domain_name + ' -count ' + str(count) + ' -horizon ' + str(horizon) + '" --run-objective QUALITY --rungroup optimizations --seed 1'],
         shell=True)
 
     directory_listing = os.listdir("smac-output/optimizations/state-run1/")
@@ -309,7 +311,9 @@ def cross_origin_state():
 # Binds the server to port 8938 and listens to all IP addresses.
 if __name__ == "__main__":
     print("Starting server...")
-    app.run(host='0.0.0.0', port=8938, debug=True, use_reloader=False, threaded=True)
-    print("...started")
     with open("servers/" + args["touch"], 'w') as touched:
         pass
+    app.run(host='0.0.0.0', port=8938, debug=False, use_reloader=False, threaded=True)
+    #app.run(host='0.0.0.0', port=8938, debug=True, use_reloader=False, threaded=True)
+    print("...started")
+
