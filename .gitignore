@@ -74,3 +74,4 @@ biased*.csv
 unbiased*.csv
 *.bak
 *.variances.pkl
+servers/*

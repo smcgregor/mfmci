@@ -2,6 +2,16 @@
 
 PYTHONPATH="/nfs/guille/tgd/users/mcgregse/anaconda2/bin/python2.7"
 uuid=$(uuidgen)
+smac_runs_limit="300"
+smac_horizon="99"
+smac_sample_count="30"
+
+rewards_suppression=$1
+rewards_timber=$2
+rewards_ecology=$3
+rewards_air=$4
+rewards_recreation=$5
+
 
 # ----------------------------------------------------------------------------
 # Process the node blacklist
@@ -24,10 +34,10 @@ fi
 # ----------------------------------------------------------------------------
 # Construct job scripts
 
-if [[ $# -eq 1 ]]; then
+if [[ $# -eq 5 ]]; then
     files=("z"$uuid)
 else
-    echo "Usage: cluster_optimize.sh <test-selector>"
+    echo "Usage: cluster_optimize.sh {0,1}<Suppression> {0,1}<Timber>  {0,1}<Ecology> {0,1}<Air> {0,1}<Recreation> "
     exit 0
 fi
 
@@ -64,7 +74,8 @@ do
     echo 'done'>> $g
 
     # Ask for the optimization
-    echo 'curl "http://localhost:8938/optimize?Sample%20Count=30&Horizon=99&Render%20Ground%20Truth=0&Use%20Location%20Policy=0&Use%20Landscape%20Policy=0&ERC%20Threshold=71&Days%20Until%20End%20of%20Season%20Threshold=51&Number%20of%20Runs%20Limit=500"'>> $g
+    #echo 'curl "http://localhost:8938/optimize?Sample%20Count=30&Horizon=99&Render%20Ground%20Truth=0&Use%20Location%20Policy=0&Use%20Landscape%20Policy=0&ERC%20Threshold=71&Days%20Until%20End%20of%20Season%20Threshold=51&Number%20of%20Runs%20Limit=500"'>> $g
+    echo "curl 'http://localhost:8938/optimize?Use%20Tree%20Policy=1&high_fuel_count=0&fire_size_differential_1=0&fire_size_differential_2=0&fire_suppression_cost_1=0&fire_suppression_cost_2=0&fire_suppression_cost_3=0&fire_suppression_cost_4=0&fire_days_differential_1=0&fire_days_differential_2=0&fire_days_differential_3=0&fire_days_differential_4=0&fire_days_differential_5=0&fire_days_differential_6=0&fire_days_differential_7=0&fire_days_differential_8=0&Sample%20Count=$smac_sample_count&Horizon=$smac_horizon&Render%20Ground%20Truth=0&restoration%20index%20dollars=0&ponderosa%20price%20per%20bf=0&mixed%20conifer%20price%20per%20bf=0&lodgepole%20price%20per%20bf=0&airshed%20smoke%20reward%20per%20day=0&recreation%20index%20dollars=0&suppression%20expense%20dollars=1&Use%20Location%20Policy=0&Use%20Landscape%20Policy=0&ERC%20Threshold=65&Days%20Until%20End%20of%20Season%20Threshold=100&Number%20of%20Runs%20Limit=$smac_runs_limit&discount=0.96&rewards_suppression=$rewards_suppression&rewards_timber=$rewards_timber&rewards_ecology=$rewards_ecology&rewards_air=$rewards_air&rewards_recreation=$rewards_recreation'" >> $g
 
     qsub $g
     sleep 1

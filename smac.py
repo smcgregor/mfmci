@@ -37,10 +37,54 @@ params["sample_count"] = params["count"]
 params["horizon"] = params["horizon"]
 url = annotations.get_smac_url(params)
 
-reward_function = reward_module.reward_factory({}) #  todo: specify the reward function from parameters
+reward_compontent = ""
+if params["rewards_suppression"] == "1" and params["rewards_timber"] == "1" and params["rewards_ecology"] == "1" and params["rewards_air"] == "1" and params["rewards_recreation"] == "1":
+    reward_compontent = "composite"
+elif params["rewards_suppression"] == "0" and params["rewards_timber"] == "1" and params["rewards_ecology"] == "1" and params["rewards_air"] == "1" and params["rewards_recreation"] == "1":
+    reward_compontent = "politics"
+elif params["rewards_suppression"] == "0" and params["rewards_timber"] == "0" and params["rewards_ecology"] == "0" and params["rewards_air"] == "1" and params["rewards_recreation"] == "1":
+    reward_compontent = "home"
+elif params["rewards_suppression"] == "1" and params["rewards_timber"] == "1" and params["rewards_ecology"] == "0" and params["rewards_air"] == "0" and params["rewards_recreation"] == "0":
+    reward_compontent = "timber"
+else:
+    assert False
+
+reward_function = reward_module.reward_factory({"component": reward_compontent})
 
 data = json.load(urllib2.urlopen(url))
-total = reward_function(data)
+total = reward_function(data["trajectories"])
+
+suppression_count = 0
+for traj in data["trajectories"]:
+    for time_step in traj:
+        if time_step["action"] == 1:
+            suppression_count += 1
+
+with open("parameter_exploration" + reward_compontent + ".csv", "a") as f:
+
+    f.write("{},".format(suppression_count))
+    f.write("{},".format(total))
+
+    f.write("{},".format(int(params["high_fuel_count"])))
+
+    f.write("{},".format(int(params["fire_size_differential_1"])))
+    f.write("{},".format(int(params["fire_size_differential_2"])))
+
+    f.write("{},".format(int(params["fire_suppression_cost_1"])))
+    f.write("{},".format(int(params["fire_suppression_cost_2"])))
+    f.write("{},".format(int(params["fire_suppression_cost_3"])))
+    f.write("{},".format(int(params["fire_suppression_cost_4"])))
+
+    f.write("{},".format(int(params["fire_days_differential_1"])))
+    f.write("{},".format(int(params["fire_days_differential_2"])))
+    f.write("{},".format(int(params["fire_days_differential_3"])))
+    f.write("{},".format(int(params["fire_days_differential_4"])))
+    f.write("{},".format(int(params["fire_days_differential_5"])))
+    f.write("{},".format(int(params["fire_days_differential_6"])))
+    f.write("{},".format(int(params["fire_days_differential_7"])))
+    f.write("{}".format(int(params["fire_days_differential_8"])))
+    f.write("\n")
+
 
 # SMAC has a few different output fields; here, we only need the 4th output:
-print "Result for SMAC: SUCCESS, 0, 0, {}, 0".format(total)
+print "Result for SMAC: SUCCESS, 0, 0, {}, 0".format(-total)

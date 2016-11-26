@@ -11,31 +11,34 @@ def reward_factory(parameter_dictionary):
     :return:
     """
     restoration_index_dollars = 1.0
-    ponderosa_price_per_bf = 1.0
-    mixed_conifer_price_per_bf = 1.0
-    lodgepole_price_per_bf = 1.0
-    airshed_smoke_reward_per_day = -1000.0
-    recreation_index_dollars = 1.0
+    ponderosa_price_per_bf = 0.5
+    mixed_conifer_price_per_bf = 0.4
+    lodgepole_price_per_bf = 0.3
+    airshed_smoke_reward_per_day = -10000.0
+    recreation_index_dollars = 2.0
     suppression_expense_scale = 1.0
     discount = 0.96
+    component = "all"
 
     keys = parameter_dictionary.keys()
     if "restoration index dollars" in keys:
         restoration_index_dollars = float(parameter_dictionary["restoration index dollars"])
     if "ponderosa price per bf" in keys:
-        restoration_index_dollars = float(parameter_dictionary["ponderosa price per bf"])
+        ponderosa_price_per_bf = float(parameter_dictionary["ponderosa price per bf"])
     if "mixed conifer price per bf" in keys:
-        restoration_index_dollars = float(parameter_dictionary["mixed conifer price per bf"])
+        mixed_conifer_price_per_bf = float(parameter_dictionary["mixed conifer price per bf"])
     if "lodgepole price per bf" in keys:
-        restoration_index_dollars = float(parameter_dictionary["lodgepole price per bf"])
+        lodgepole_price_per_bf = float(parameter_dictionary["lodgepole price per bf"])
     if "airshed smoke reward per day" in keys:
-        restoration_index_dollars = float(parameter_dictionary["airshed smoke reward per day"])
+        airshed_smoke_reward_per_day = float(parameter_dictionary["airshed smoke reward per day"])
     if "recreation index dollars" in keys:
-        restoration_index_dollars = float(parameter_dictionary["recreation index dollars"])
+        recreation_index_dollars = float(parameter_dictionary["recreation index dollars"])
     if "suppression expense dollars" in keys:
-        restoration_index_dollars = float(parameter_dictionary["suppression expense dollars"])
+        suppression_expense_scale = float(parameter_dictionary["suppression expense dollars"])
     if "discount" in keys:
         discount = float(parameter_dictionary["discount"])
+    if "component" in keys:
+        component = parameter_dictionary["component"]
 
     def reward_function(data,
                         restoration_index_dollars = restoration_index_dollars,
@@ -45,7 +48,8 @@ def reward_factory(parameter_dictionary):
                         airshed_smoke_reward_per_day = airshed_smoke_reward_per_day,
                         recreation_index_dollars = recreation_index_dollars,
                         suppression_expense_scale = suppression_expense_scale,
-                        discount = discount):
+                        discount = discount,
+                        component = component):
         """
 
         :param data: The transitions we are assessing reward on
@@ -75,15 +79,6 @@ def reward_factory(parameter_dictionary):
         :param data:
         :return:
         """
-
-        ### Reward Parameters ###
-        restoration_index_dollars = 1.0  # How much squared deviations from the target ponderosa succession classes costs
-        ponderosa_price_per_bf = 1.0
-        mixed_conifer_price_per_bf = 1.0
-        lodgepole_price_per_bf = 1.0
-        airshed_smoke_reward_per_day = -1000.0  # How much each day of the fire costs
-        recreation_index_dollars = 1.0  # How much squared deviations from the target cost
-        suppression_expense_scale = 1.0  # How much to scale the costs of suppression
 
         def suppression_expense_reward(time_step):
             """
@@ -146,21 +141,65 @@ def reward_factory(parameter_dictionary):
             total = 0.0
             for k in restoration_index_targets:
                 total += math.pow(restoration_index_targets[k] - time_step[k], 2)
-            return total * restoration_index_dollars
+            return -total * restoration_index_dollars
 
-        harvest_total = 0
-        restoration_index_total = 0.0
-        airshed_total = 0.0
-        recreation_index_total = 0.0
-        suppression_expense_total = 0.0
-        for trajectory in data["trajectories"]:
-            for idx, time_step in enumerate(trajectory):
-                restoration_index_total += restoration_index_reward(time_step)
-                harvest_total += harvest_reward(time_step)
-                airshed_total += airshed_reward(time_step)
-                recreation_index_total += recreation_index_reward(time_step)
-                suppression_expense_total += suppression_expense_reward(time_step)
-        total = (harvest_total + restoration_index_total +
-                 airshed_total + recreation_index_total + suppression_expense_total) * math.pow(discount, idx)
-        return total
+        def state_reward(state, component = component):
+            """
+            The reward for a single state.
+            :param state:
+            :return:
+            """
+            total = 0.0
+            if component == "all":
+                total += suppression_expense_reward(state)
+                total += harvest_reward(state)
+                total += restoration_index_reward(state)
+                total += airshed_reward(state)
+                total += recreation_index_reward(state)
+            elif component == "composite":
+                total += suppression_expense_reward(state)
+                total += harvest_reward(state)
+                total += restoration_index_reward(state)
+                total += airshed_reward(state)
+                total += recreation_index_reward(state)
+            elif component == "politics":
+                #total += suppression_expense_reward(state)
+                total += harvest_reward(state)
+                total += restoration_index_reward(state)
+                total += airshed_reward(state)
+                total += recreation_index_reward(state)
+            elif component == "home":
+                #total += suppression_expense_reward(state)
+                #total += harvest_reward(state)
+                #total += restoration_index_reward(state)
+                total += airshed_reward(state)
+                total += recreation_index_reward(state)
+            elif component == "timber":
+                total += suppression_expense_reward(state)
+                total += harvest_reward(state)
+                #total += restoration_index_reward(state)
+                #total += airshed_reward(state)
+                #total += recreation_index_reward(state)
+            elif component == "restoration_index_reward":
+                total += restoration_index_reward(state)
+            elif component == "harvest_reward":
+                total += harvest_reward(state)
+            elif component == "airshed_reward":
+                total += airshed_reward(state)
+            elif component == "recreation_index_reward":
+                total += recreation_index_reward(state)
+            elif component == "suppression_expense_reward":
+                total += suppression_expense_reward(state)
+            return total
+
+        total = 0.0
+        if type(data) == list:
+            for trajectory in data:
+                for idx, time_step in enumerate(trajectory):
+                    total += (state_reward(time_step) * math.pow(discount, idx))
+            return total
+        else:
+            assert type(data) == dict
+            return state_reward(data)
+
     return reward_function

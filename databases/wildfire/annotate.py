@@ -5,6 +5,7 @@ import importlib
 import glob
 from struct import unpack
 import bz2
+import databases.wildfire.rewards
 
 #harvest_priority_rows = [119, 136, 159, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # use range(1, 174) to include all of them
 #harvest_priority_rows = [119, 136, 159, 103, 167, 120, 22]
@@ -117,9 +118,16 @@ VISUALIZATION_VARIABLES = [
     "lodgepoleSC2",
     "lodgepoleSC3",
     "startIndex",
-    "endIndex"
+    "endIndex",
+
+    "rewards all",
+    "rewards restoration",
+    "rewards harvest",
+    "rewards airshed",
+    "rewards recreation",
+    "rewards suppression"
 ]
-VISUALIZATION_VARIABLES = VISUALIZATION_VARIABLES + ["PriorityRow" + str(i) + " start" for i in range(1, 174)]
+#VISUALIZATION_VARIABLES = VISUALIZATION_VARIABLES + ["PriorityRow" + str(i) + " start" for i in range(1, 174)]
 
 # All the actions that are possible
 POSSIBLE_ACTIONS = [
@@ -138,8 +146,26 @@ def write_smac_parameters(params):
 
     # Write SMAC's parameter file
     f = open("smac.pcs", "w")
-    f.write("erc integer [0,95] [{}]\n".format(erc_threshold))
-    f.write("days integer [0,180] [{}]\n".format(days_threshold))
+    #f.write("erc integer [0,95] [{}]\n".format(erc_threshold))
+    #f.write("days integer [0,180] [{}]\n".format(days_threshold))
+    f.write("high_fuel_count integer [0,1000000] [{}]\n".format(int(params["high_fuel_count"])))
+
+    f.write("fire_size_differential_1 integer [0,1000000] [{}]\n".format(int(params["fire_size_differential_1"])))
+    f.write("fire_size_differential_2 integer [0,1000000] [{}]\n".format(int(params["fire_size_differential_2"])))
+
+    f.write("fire_suppression_cost_1 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_1"])))
+    f.write("fire_suppression_cost_2 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_2"])))
+    f.write("fire_suppression_cost_3 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_3"])))
+    f.write("fire_suppression_cost_4 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_4"])))
+
+    f.write("fire_days_differential_1 integer [0,60] [{}]\n".format(int(params["fire_days_differential_1"])))
+    f.write("fire_days_differential_2 integer [0,60] [{}]\n".format(int(params["fire_days_differential_2"])))
+    f.write("fire_days_differential_3 integer [0,60] [{}]\n".format(int(params["fire_days_differential_3"])))
+    f.write("fire_days_differential_4 integer [0,60] [{}]\n".format(int(params["fire_days_differential_4"])))
+    f.write("fire_days_differential_5 integer [0,60] [{}]\n".format(int(params["fire_days_differential_5"])))
+    f.write("fire_days_differential_6 integer [0,60] [{}]\n".format(int(params["fire_days_differential_6"])))
+    f.write("fire_days_differential_7 integer [0,60] [{}]\n".format(int(params["fire_days_differential_7"])))
+    f.write("fire_days_differential_8 integer [0,60] [{}]\n".format(int(params["fire_days_differential_8"])))
     f.close()
 
 def get_smac_url(params):
@@ -152,9 +178,27 @@ def get_smac_url(params):
            "&Render+Ground+Truth=0" + \
            "&Use+Location+Policy=0" + \
            "&Use+Landscape+Policy=0" + \
+           "&Use+Tree+Policy=1" + \
            "&Horizon=" + str(params["horizon"]) + \
-           "&ERC+Threshold=" + str(params["erc"]) + \
-           "&Days+Until+End+of+Season+Threshold=" + str(params["days"])
+           "&high_fuel_count=" + str(params["high_fuel_count"]) + \
+           "&fire_size_differential_1=" + str(params["fire_size_differential_1"]) + \
+           "&fire_size_differential_2=" + str(params["fire_size_differential_2"]) + \
+           "&fire_suppression_cost_1=" + str(params["fire_suppression_cost_1"]) + \
+           "&fire_suppression_cost_2=" + str(params["fire_suppression_cost_2"]) + \
+           "&fire_suppression_cost_3=" + str(params["fire_suppression_cost_3"]) + \
+           "&fire_suppression_cost_4=" + str(params["fire_suppression_cost_4"]) + \
+           "&fire_days_differential_1=" + str(params["fire_days_differential_1"]) + \
+           "&fire_days_differential_2=" + str(params["fire_days_differential_2"]) + \
+           "&fire_days_differential_3=" + str(params["fire_days_differential_3"]) + \
+           "&fire_days_differential_4=" + str(params["fire_days_differential_4"]) + \
+           "&fire_days_differential_5=" + str(params["fire_days_differential_5"]) + \
+           "&fire_days_differential_6=" + str(params["fire_days_differential_6"]) + \
+           "&fire_days_differential_7=" + str(params["fire_days_differential_7"]) + \
+           "&fire_days_differential_8=" + str(params["fire_days_differential_8"]) + \
+           "&ERC+Threshold=" + str(0) + \
+           "&Days+Until+End+of+Season+Threshold=" + str(0)
+           #"&ERC+Threshold=" + str(params["erc"]) + \
+           #"&Days+Until+End+of+Season+Threshold=" + str(params["days"])
 
 def post_process_smac_output(last_row):
     """
@@ -164,9 +208,26 @@ def post_process_smac_output(last_row):
     """
     # An example output line is below
     # 5: days='56', erc='17'
+    #ret_params = {
+    #    "ERC Threshold": last_row["erc"],
+    #    "Days Until End of Season Threshold": last_row["days"],
+    #    }
     ret_params = {
-        "ERC Threshold": last_row["erc"],
-        "Days Until End of Season Threshold": last_row["days"],
+        "high_fuel_count": last_row["high_fuel_count"],
+        "fire_size_differential_1": last_row["fire_size_differential_1"],
+        "fire_size_differential_2": last_row["fire_size_differential_2"],
+        "fire_suppression_cost_1": last_row["fire_size_differential_1"],
+        "fire_suppression_cost_2": last_row["fire_suppression_cost_2"],
+        "fire_suppression_cost_3": last_row["fire_suppression_cost_3"],
+        "fire_suppression_cost_4": last_row["fire_suppression_cost_4"],
+        "fire_days_differential_1": last_row["fire_days_differential_1"],
+        "fire_days_differential_2": last_row["fire_days_differential_2"],
+        "fire_days_differential_3": last_row["fire_days_differential_3"],
+        "fire_days_differential_4": last_row["fire_days_differential_4"],
+        "fire_days_differential_5": last_row["fire_days_differential_5"],
+        "fire_days_differential_6": last_row["fire_days_differential_6"],
+        "fire_days_differential_7": last_row["fire_days_differential_7"],
+        "fire_days_differential_8": last_row["fire_days_differential_8"]
         }
     return ret_params
 
@@ -230,6 +291,13 @@ def get_image(image_file_name):
     return img_io
 
 
+all_rewards = databases.wildfire.rewards.reward_factory({"component": "all"})
+restoration_rewards = databases.wildfire.rewards.reward_factory({"component": "restoration_index_reward"})
+harvest_rewards = databases.wildfire.rewards.reward_factory({"component": "harvest_reward"})
+airshed_rewards = databases.wildfire.rewards.reward_factory({"component": "airshed_reward"})
+recreation_rewards = databases.wildfire.rewards.reward_factory({"component": "recreation_index_reward"})
+suppression_rewards = databases.wildfire.rewards.reward_factory({"component": "suppression_expense_reward"})
+
 def PROCESS_ROW(additional_state):
     """
     Process the additional state to include the proper titles and a list of the images for the /state endpoint.
@@ -275,6 +343,13 @@ def PROCESS_ROW(additional_state):
                                    additional_state["lcpFileName"] # todo: update this for the new database
                                   )
         additional_state["image row"].append(file_name)
+
+    additional_state["rewards all"] = all_rewards(additional_state)
+    additional_state["rewards restoration"] = restoration_rewards(additional_state)
+    additional_state["rewards harvest"] = harvest_rewards(additional_state)
+    additional_state["rewards airshed"] = airshed_rewards(additional_state)
+    additional_state["rewards recreation"] = recreation_rewards(additional_state)
+    additional_state["rewards suppression"] = suppression_rewards(additional_state)
 
 # The initialization object for MDPvis
 mdpvis_initialization_object = {

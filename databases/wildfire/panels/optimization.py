@@ -20,6 +20,51 @@ panel = {
                                    "min": 0,
                                    "step": .01,
                                    "units": "Unitless"
+                               },
+                               {
+                                   "name": "rewards_suppression",
+                                   "description": "Include suppression expenses in the rewards",
+                                   "current_value": 1,
+                                   "max": 1,
+                                   "min": 0,
+                                   "step": 0,
+                                   "units": "Boolean"
+                               },
+                               {
+                                   "name": "rewards_timber",
+                                   "description": "Include timber revenues in the rewards",
+                                   "current_value": 1,
+                                   "max": 1,
+                                   "min": 0,
+                                   "step": 0,
+                                   "units": "Boolean"
+                               },
+                               {
+                                   "name": "rewards_ecology",
+                                   "description": "Include ecology in the rewards",
+                                   "current_value": 1,
+                                   "max": 1,
+                                   "min": 0,
+                                   "step": 0,
+                                   "units": "Boolean"
+                               },
+                               {
+                                   "name": "rewards_air",
+                                   "description": "Include air quality in the rewards",
+                                   "current_value": 1,
+                                   "max": 1,
+                                   "min": 0,
+                                   "step": 0,
+                                   "units": "Boolean"
+                               },
+                               {
+                                   "name": "rewards_recreation",
+                                   "description": "Include recreation in the rewards",
+                                   "current_value": 1,
+                                   "max": 1,
+                                   "min": 0,
+                                   "step": 0,
+                                   "units": "Boolean"
                                }
             ],
             "categorical": [],
