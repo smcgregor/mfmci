@@ -10,13 +10,13 @@ def reward_factory(parameter_dictionary):
     :param parameter_dictionary: The parameters sent by MDPvis.
     :return:
     """
-    restoration_index_dollars = 1.0
-    ponderosa_price_per_bf = 0.5
-    mixed_conifer_price_per_bf = 0.4
-    lodgepole_price_per_bf = 0.3
-    airshed_smoke_reward_per_day = -10000.0
-    recreation_index_dollars = 2.0
-    suppression_expense_scale = 1.0
+    restoration_index_dollars = 1.0  # * [-12400, 0]
+    ponderosa_price_per_bf = 0.5  # * [0, 100000000]
+    mixed_conifer_price_per_bf = 0.4  # * [0, 100000000]
+    lodgepole_price_per_bf = 0.3  # * [0, 100000000]
+    airshed_smoke_reward_per_day = -10000.0  # * [0, 60]
+    recreation_index_dollars = 2.0  # * [-10000, 0]
+    suppression_expense_scale = 1.0  # * [0, 9999999]
     discount = 0.96
     component = "all"
 
@@ -179,6 +179,12 @@ def reward_factory(parameter_dictionary):
                 total += harvest_reward(state)
                 #total += restoration_index_reward(state)
                 #total += airshed_reward(state)
+                #total += recreation_index_reward(state)
+            elif component == "air":
+                #total += suppression_expense_reward(state)
+                #total += harvest_reward(state)
+                #total += restoration_index_reward(state)
+                total += airshed_reward(state)
                 #total += recreation_index_reward(state)
             elif component == "restoration_index_reward":
                 total += restoration_index_reward(state)

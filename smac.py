@@ -37,6 +37,8 @@ params["sample_count"] = params["count"]
 params["horizon"] = params["horizon"]
 url = annotations.get_smac_url(params)
 
+
+reward_sum = int(params["rewards_suppression"]) + int(params["rewards_timber"]) + int(params["rewards_ecology"]) + int(params["rewards_air"]) + int(params["rewards_recreation"])
 reward_compontent = ""
 if params["rewards_suppression"] == "1" and params["rewards_timber"] == "1" and params["rewards_ecology"] == "1" and params["rewards_air"] == "1" and params["rewards_recreation"] == "1":
     reward_compontent = "composite"
@@ -46,6 +48,21 @@ elif params["rewards_suppression"] == "0" and params["rewards_timber"] == "0" an
     reward_compontent = "home"
 elif params["rewards_suppression"] == "1" and params["rewards_timber"] == "1" and params["rewards_ecology"] == "0" and params["rewards_air"] == "0" and params["rewards_recreation"] == "0":
     reward_compontent = "timber"
+elif params["rewards_suppression"] == "0" and params["rewards_timber"] == "0" and params["rewards_ecology"] == "0" and params["rewards_air"] == "1" and params["rewards_recreation"] == "0":
+    reward_compontent = "air"
+elif reward_sum == 1:
+    if params["rewards_suppression"] == "1":
+        reward_compontent = "suppression_expense_reward"
+    elif params["rewards_timber"] == "1":
+        reward_compontent = "harvest_reward"
+    elif params["rewards_ecology"] == "1":
+        reward_compontent = "restoration_index_reward"
+    elif params["rewards_air"] == "1":
+        reward_compontent = "airshed_reward"
+    elif params["rewards_recreation"] == "1":
+        reward_compontent = "recreation_index_reward"
+    else:
+        assert False
 else:
     assert False
 
