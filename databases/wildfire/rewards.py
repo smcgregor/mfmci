@@ -10,15 +10,17 @@ def reward_factory(parameter_dictionary):
     :param parameter_dictionary: The parameters sent by MDPvis.
     :return:
     """
-    restoration_index_dollars = 1.0  # * [-12400, 0]
+    restoration_index_dollars = (1.0 * 4.48E-07)  # * [-12400, 0]
     ponderosa_price_per_bf = 0.5  # * [0, 100000000]
     mixed_conifer_price_per_bf = 0.4  # * [0, 100000000]
     lodgepole_price_per_bf = 0.3  # * [0, 100000000]
-    airshed_smoke_reward_per_day = -10000.0  # * [0, 60]
-    recreation_index_dollars = 2.0  # * [-10000, 0]
+    airshed_smoke_reward_per_day = (-10000.0 * 0.169089921)  # * [0, 60]
+    recreation_index_dollars = (2.0 * 1.56E-06)  # * [-10000, 0]
     suppression_expense_scale = 1.0  # * [0, 9999999]
     discount = 0.96
     component = "all"
+
+
 
     keys = parameter_dictionary.keys()
     if "restoration index dollars" in keys:
