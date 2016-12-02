@@ -13,7 +13,7 @@ def policy_factory(parameter_dictionary):
     time_until_end_of_fire_season_threshold = int(parameter_dictionary["Days Until End of Season Threshold"])
 
     params = {}
-    if "high_fuel_count" in parameter_dictionary.keys():
+    if False:
 
         params = {
             "split": int(parameter_dictionary["high_fuel_count"]),
@@ -91,7 +91,6 @@ def policy_factory(parameter_dictionary):
                 }
             }
         }
-
         #params["split"] = int(parameter_dictionary["high_fuel_count"])
 
         #params["fire_days_differential_1"] = int(parameter_dictionary["fire_days_differential_1"])
@@ -110,6 +109,84 @@ def policy_factory(parameter_dictionary):
 
         #params["fire_size_differential_1"] = int(parameter_dictionary["fire_size_differential_1"])
         #params["fire_size_differential_2"] = int(parameter_dictionary["fire_size_differential_2"])
+    elif "fire_ending_8" in parameter_dictionary.keys():
+
+        params = {
+            "split": int(parameter_dictionary["high_fuel_count"]),
+            "param_name": "high_fuel_count",
+            "left": {
+                "split": int(parameter_dictionary["erc_1"]),
+                "param_name": "erc",
+                "left": {
+                    "split": int(parameter_dictionary["day_1"]),
+                    "param_name": "day",
+                    "left": {
+                        "split": int(parameter_dictionary["fire_ending_1"]),
+                        "param_name": "fire_ending",
+                        "left": 0,
+                        "right": 1
+                    },
+                    "right": {
+                        "split": int(parameter_dictionary["fire_ending_2"]),
+                        "param_name": "fire_ending",
+                        "left": 0,
+                        "right": 1
+                    }
+                },
+                "right": {
+                    "split": int(parameter_dictionary["day_2"]),
+                    "param_name": "day",
+                    "left": {
+                        "split": int(parameter_dictionary["fire_ending_3"]),
+                        "param_name": "fire_ending",
+                        "left": 0,
+                        "right": 1
+                    },
+                    "right": {
+                        "split": int(parameter_dictionary["fire_ending_4"]),
+                        "param_name": "fire_ending",
+                        "left": 0,
+                        "right": 1
+                    }
+                }
+            },
+            "right": {
+                "split": int(parameter_dictionary["erc_2"]),
+                "param_name": "erc",
+                "left": {
+                    "split": int(parameter_dictionary["day_3"]),
+                    "param_name": "day",
+                    "left": {
+                        "split": int(parameter_dictionary["fire_ending_5"]),
+                        "param_name": "fire_ending",
+                        "left": 0,
+                        "right": 1
+                    },
+                    "right": {
+                        "split": int(parameter_dictionary["fire_ending_6"]),
+                        "param_name": "fire_ending",
+                        "left": 0,
+                        "right": 1
+                    }
+                },
+                "right": {
+                    "split": int(parameter_dictionary["day_4"]),
+                    "param_name": "day",
+                    "left": {
+                        "split": int(parameter_dictionary["fire_ending_7"]),
+                        "param_name": "fire_ending",
+                        "left": 0,
+                        "right": 1
+                    },
+                    "right": {
+                        "split": int(parameter_dictionary["fire_ending_8"]),
+                        "param_name": "fire_ending",
+                        "left": 0,
+                        "right": 1
+                    }
+                }
+            }
+        }
 
     def on_policy(transition_tuple=None):
         assert transition_tuple is not None
@@ -146,6 +223,9 @@ def policy_factory(parameter_dictionary):
         vals["fire_size_differential"] = abs(int(result_letburn["SurfaceFirePixels"]) + int(result_letburn["CrownFirePixels"]) - int(result_suppress["SurfaceFirePixels"]) + int(result_suppress["CrownFirePixels"]))
         vals["fire_suppression_cost"] = int(result_suppress["fireSuppressionCost"])
         vals["fire_days_differential"] = int(result_letburn["endIndex"]) - int(result_suppress["endIndex"])
+        vals["fire_ending"] = int(int(result_letburn["endIndex"]) - int(result_letburn["startIndex"]) < 8)
+        vals["erc"] = int(additional_state["ERC"])
+        vals["day"] = int(additional_state["startIndex"])
         assert(vals["fire_days_differential"] >= 0)
         return tree(vals, params)
 

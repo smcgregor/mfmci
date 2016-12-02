@@ -146,26 +146,44 @@ def write_smac_parameters(params):
 
     # Write SMAC's parameter file
     f = open("smac.pcs", "w")
-    #f.write("erc integer [0,95] [{}]\n".format(erc_threshold))
-    #f.write("days integer [0,180] [{}]\n".format(days_threshold))
-    f.write("high_fuel_count integer [0,1000000] [{}]\n".format(int(params["high_fuel_count"])))
+    if False:
+        f.write("high_fuel_count integer [0,1000000] [{}]\n".format(int(params["high_fuel_count"])))
 
-    f.write("fire_size_differential_1 integer [0,1000000] [{}]\n".format(int(params["fire_size_differential_1"])))
-    f.write("fire_size_differential_2 integer [0,1000000] [{}]\n".format(int(params["fire_size_differential_2"])))
+        f.write("fire_size_differential_1 integer [0,1000000] [{}]\n".format(int(params["fire_size_differential_1"])))
+        f.write("fire_size_differential_2 integer [0,1000000] [{}]\n".format(int(params["fire_size_differential_2"])))
 
-    f.write("fire_suppression_cost_1 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_1"])))
-    f.write("fire_suppression_cost_2 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_2"])))
-    f.write("fire_suppression_cost_3 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_3"])))
-    f.write("fire_suppression_cost_4 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_4"])))
+        f.write("fire_suppression_cost_1 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_1"])))
+        f.write("fire_suppression_cost_2 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_2"])))
+        f.write("fire_suppression_cost_3 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_3"])))
+        f.write("fire_suppression_cost_4 integer [0,10000000] [{}]\n".format(int(params["fire_suppression_cost_4"])))
 
-    f.write("fire_days_differential_1 integer [0,60] [{}]\n".format(int(params["fire_days_differential_1"])))
-    f.write("fire_days_differential_2 integer [0,60] [{}]\n".format(int(params["fire_days_differential_2"])))
-    f.write("fire_days_differential_3 integer [0,60] [{}]\n".format(int(params["fire_days_differential_3"])))
-    f.write("fire_days_differential_4 integer [0,60] [{}]\n".format(int(params["fire_days_differential_4"])))
-    f.write("fire_days_differential_5 integer [0,60] [{}]\n".format(int(params["fire_days_differential_5"])))
-    f.write("fire_days_differential_6 integer [0,60] [{}]\n".format(int(params["fire_days_differential_6"])))
-    f.write("fire_days_differential_7 integer [0,60] [{}]\n".format(int(params["fire_days_differential_7"])))
-    f.write("fire_days_differential_8 integer [0,60] [{}]\n".format(int(params["fire_days_differential_8"])))
+        f.write("fire_days_differential_1 integer [0,60] [{}]\n".format(int(params["fire_days_differential_1"])))
+        f.write("fire_days_differential_2 integer [0,60] [{}]\n".format(int(params["fire_days_differential_2"])))
+        f.write("fire_days_differential_3 integer [0,60] [{}]\n".format(int(params["fire_days_differential_3"])))
+        f.write("fire_days_differential_4 integer [0,60] [{}]\n".format(int(params["fire_days_differential_4"])))
+        f.write("fire_days_differential_5 integer [0,60] [{}]\n".format(int(params["fire_days_differential_5"])))
+        f.write("fire_days_differential_6 integer [0,60] [{}]\n".format(int(params["fire_days_differential_6"])))
+        f.write("fire_days_differential_7 integer [0,60] [{}]\n".format(int(params["fire_days_differential_7"])))
+        f.write("fire_days_differential_8 integer [0,60] [{}]\n".format(int(params["fire_days_differential_8"])))
+    else:
+        f.write("high_fuel_count integer [0,1000000] [{}]\n".format(int(params["high_fuel_count"])))
+
+        f.write("erc_1 integer [0,100] [{}]\n".format(int(params["erc_1"])))
+        f.write("erc_2 integer [0,100] [{}]\n".format(int(params["erc_2"])))
+
+        f.write("day_1 integer [0,180] [{}]\n".format(int(params["day_1"])))
+        f.write("day_2 integer [0,180] [{}]\n".format(int(params["day_2"])))
+        f.write("day_3 integer [0,180] [{}]\n".format(int(params["day_3"])))
+        f.write("day_4 integer [0,180] [{}]\n".format(int(params["day_4"])))
+
+        f.write("fire_ending_1 integer [0,1] [{}]\n".format(int(params["fire_ending_1"])))
+        f.write("fire_ending_2 integer [0,1] [{}]\n".format(int(params["fire_ending_2"])))
+        f.write("fire_ending_3 integer [0,1] [{}]\n".format(int(params["fire_ending_3"])))
+        f.write("fire_ending_4 integer [0,1] [{}]\n".format(int(params["fire_ending_4"])))
+        f.write("fire_ending_5 integer [0,1] [{}]\n".format(int(params["fire_ending_5"])))
+        f.write("fire_ending_6 integer [0,1] [{}]\n".format(int(params["fire_ending_6"])))
+        f.write("fire_ending_7 integer [0,1] [{}]\n".format(int(params["fire_ending_7"])))
+        f.write("fire_ending_8 integer [0,1] [{}]\n".format(int(params["fire_ending_8"])))
     f.close()
 
 def get_smac_url(params):
@@ -174,31 +192,58 @@ def get_smac_url(params):
     :param params:
     :return:
     """
-    return "http://localhost:8938/trajectories?Sample+Count=" + str(params["sample_count"]) + \
-           "&Render+Ground+Truth=0" + \
-           "&Use+Location+Policy=0" + \
-           "&Use+Landscape+Policy=0" + \
-           "&Use+Tree+Policy=1" + \
-           "&Horizon=" + str(params["horizon"]) + \
-           "&high_fuel_count=" + str(params["high_fuel_count"]) + \
-           "&fire_size_differential_1=" + str(params["fire_size_differential_1"]) + \
-           "&fire_size_differential_2=" + str(params["fire_size_differential_2"]) + \
-           "&fire_suppression_cost_1=" + str(params["fire_suppression_cost_1"]) + \
-           "&fire_suppression_cost_2=" + str(params["fire_suppression_cost_2"]) + \
-           "&fire_suppression_cost_3=" + str(params["fire_suppression_cost_3"]) + \
-           "&fire_suppression_cost_4=" + str(params["fire_suppression_cost_4"]) + \
-           "&fire_days_differential_1=" + str(params["fire_days_differential_1"]) + \
-           "&fire_days_differential_2=" + str(params["fire_days_differential_2"]) + \
-           "&fire_days_differential_3=" + str(params["fire_days_differential_3"]) + \
-           "&fire_days_differential_4=" + str(params["fire_days_differential_4"]) + \
-           "&fire_days_differential_5=" + str(params["fire_days_differential_5"]) + \
-           "&fire_days_differential_6=" + str(params["fire_days_differential_6"]) + \
-           "&fire_days_differential_7=" + str(params["fire_days_differential_7"]) + \
-           "&fire_days_differential_8=" + str(params["fire_days_differential_8"]) + \
-           "&ERC+Threshold=" + str(0) + \
-           "&Days+Until+End+of+Season+Threshold=" + str(0)
-           #"&ERC+Threshold=" + str(params["erc"]) + \
-           #"&Days+Until+End+of+Season+Threshold=" + str(params["days"])
+    if False:
+        return "http://localhost:8938/trajectories?Sample+Count=" + str(params["sample_count"]) + \
+               "&Render+Ground+Truth=0" + \
+               "&Use+Location+Policy=0" + \
+               "&Use+Landscape+Policy=0" + \
+               "&Use+Tree+Policy=1" + \
+               "&Horizon=" + str(params["horizon"]) + \
+               "&high_fuel_count=" + str(params["high_fuel_count"]) + \
+               "&fire_size_differential_1=" + str(params["fire_size_differential_1"]) + \
+               "&fire_size_differential_2=" + str(params["fire_size_differential_2"]) + \
+               "&fire_suppression_cost_1=" + str(params["fire_suppression_cost_1"]) + \
+               "&fire_suppression_cost_2=" + str(params["fire_suppression_cost_2"]) + \
+               "&fire_suppression_cost_3=" + str(params["fire_suppression_cost_3"]) + \
+               "&fire_suppression_cost_4=" + str(params["fire_suppression_cost_4"]) + \
+               "&fire_days_differential_1=" + str(params["fire_days_differential_1"]) + \
+               "&fire_days_differential_2=" + str(params["fire_days_differential_2"]) + \
+               "&fire_days_differential_3=" + str(params["fire_days_differential_3"]) + \
+               "&fire_days_differential_4=" + str(params["fire_days_differential_4"]) + \
+               "&fire_days_differential_5=" + str(params["fire_days_differential_5"]) + \
+               "&fire_days_differential_6=" + str(params["fire_days_differential_6"]) + \
+               "&fire_days_differential_7=" + str(params["fire_days_differential_7"]) + \
+               "&fire_days_differential_8=" + str(params["fire_days_differential_8"]) + \
+               "&ERC+Threshold=" + str(0) + \
+               "&Days+Until+End+of+Season+Threshold=" + str(0)
+               #"&ERC+Threshold=" + str(params["erc"]) + \
+               #"&Days+Until+End+of+Season+Threshold=" + str(params["days"])
+    else:
+        return "http://localhost:8938/trajectories?Sample+Count=" + str(params["sample_count"]) + \
+               "&Render+Ground+Truth=0" + \
+               "&Use+Location+Policy=0" + \
+               "&Use+Landscape+Policy=0" + \
+               "&Use+Tree+Policy=1" + \
+               "&Horizon=" + str(params["horizon"]) + \
+               "&high_fuel_count=" + str(params["high_fuel_count"]) + \
+               "&erc_1=" + str(params["erc_1"]) + \
+               "&erc_2=" + str(params["erc_2"]) + \
+               "&day_1=" + str(params["day_1"]) + \
+               "&day_2=" + str(params["day_2"]) + \
+               "&day_3=" + str(params["day_3"]) + \
+               "&day_4=" + str(params["day_4"]) + \
+               "&fire_ending_1=" + str(params["fire_ending_1"]) + \
+               "&fire_ending_2=" + str(params["fire_ending_2"]) + \
+               "&fire_ending_3=" + str(params["fire_ending_3"]) + \
+               "&fire_ending_4=" + str(params["fire_ending_4"]) + \
+               "&fire_ending_5=" + str(params["fire_ending_5"]) + \
+               "&fire_ending_6=" + str(params["fire_ending_6"]) + \
+               "&fire_ending_7=" + str(params["fire_ending_7"]) + \
+               "&fire_ending_8=" + str(params["fire_ending_8"]) + \
+               "&ERC+Threshold=" + str(0) + \
+               "&Days+Until+End+of+Season+Threshold=" + str(0)
+        #"&ERC+Threshold=" + str(params["erc"]) + \
+        #"&Days+Until+End+of+Season+Threshold=" + str(params["days"])
 
 def post_process_smac_output(last_row):
     """
@@ -212,22 +257,42 @@ def post_process_smac_output(last_row):
     #    "ERC Threshold": last_row["erc"],
     #    "Days Until End of Season Threshold": last_row["days"],
     #    }
-    ret_params = {
-        "high_fuel_count": last_row["high_fuel_count"],
-        "fire_size_differential_1": last_row["fire_size_differential_1"],
-        "fire_size_differential_2": last_row["fire_size_differential_2"],
-        "fire_suppression_cost_1": last_row["fire_size_differential_1"],
-        "fire_suppression_cost_2": last_row["fire_suppression_cost_2"],
-        "fire_suppression_cost_3": last_row["fire_suppression_cost_3"],
-        "fire_suppression_cost_4": last_row["fire_suppression_cost_4"],
-        "fire_days_differential_1": last_row["fire_days_differential_1"],
-        "fire_days_differential_2": last_row["fire_days_differential_2"],
-        "fire_days_differential_3": last_row["fire_days_differential_3"],
-        "fire_days_differential_4": last_row["fire_days_differential_4"],
-        "fire_days_differential_5": last_row["fire_days_differential_5"],
-        "fire_days_differential_6": last_row["fire_days_differential_6"],
-        "fire_days_differential_7": last_row["fire_days_differential_7"],
-        "fire_days_differential_8": last_row["fire_days_differential_8"]
+    if False:
+        ret_params = {
+            "high_fuel_count": last_row["high_fuel_count"],
+            "fire_size_differential_1": last_row["fire_size_differential_1"],
+            "fire_size_differential_2": last_row["fire_size_differential_2"],
+            "fire_suppression_cost_1": last_row["fire_suppression_cost_1"],
+            "fire_suppression_cost_2": last_row["fire_suppression_cost_2"],
+            "fire_suppression_cost_3": last_row["fire_suppression_cost_3"],
+            "fire_suppression_cost_4": last_row["fire_suppression_cost_4"],
+            "fire_days_differential_1": last_row["fire_days_differential_1"],
+            "fire_days_differential_2": last_row["fire_days_differential_2"],
+            "fire_days_differential_3": last_row["fire_days_differential_3"],
+            "fire_days_differential_4": last_row["fire_days_differential_4"],
+            "fire_days_differential_5": last_row["fire_days_differential_5"],
+            "fire_days_differential_6": last_row["fire_days_differential_6"],
+            "fire_days_differential_7": last_row["fire_days_differential_7"],
+            "fire_days_differential_8": last_row["fire_days_differential_8"]
+            }
+        return ret_params
+    else:
+        ret_params = {
+            "high_fuel_count": last_row["high_fuel_count"],
+            "erc_1": last_row["erc_1"],
+            "erc_2": last_row["erc_2"],
+            "day_1": last_row["day_1"],
+            "day_2": last_row["day_2"],
+            "day_3": last_row["day_3"],
+            "day_4": last_row["day_4"],
+            "fire_ending_1": last_row["fire_ending_1"],
+            "fire_ending_2": last_row["fire_ending_2"],
+            "fire_ending_3": last_row["fire_ending_3"],
+            "fire_ending_4": last_row["fire_ending_4"],
+            "fire_ending_5": last_row["fire_ending_5"],
+            "fire_ending_6": last_row["fire_ending_6"],
+            "fire_ending_7": last_row["fire_ending_7"],
+            "fire_ending_8": last_row["fire_ending_8"]
         }
     return ret_params
 

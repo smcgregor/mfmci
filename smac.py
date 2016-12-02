@@ -81,25 +81,25 @@ with open("parameter_exploration" + reward_compontent + ".csv", "a") as f:
 
     f.write("{},".format(suppression_count))
     f.write("{},".format(total))
-
-    f.write("{},".format(int(params["high_fuel_count"])))
-
-    f.write("{},".format(int(params["fire_size_differential_1"])))
-    f.write("{},".format(int(params["fire_size_differential_2"])))
-
-    f.write("{},".format(int(params["fire_suppression_cost_1"])))
-    f.write("{},".format(int(params["fire_suppression_cost_2"])))
-    f.write("{},".format(int(params["fire_suppression_cost_3"])))
-    f.write("{},".format(int(params["fire_suppression_cost_4"])))
-
-    f.write("{},".format(int(params["fire_days_differential_1"])))
-    f.write("{},".format(int(params["fire_days_differential_2"])))
-    f.write("{},".format(int(params["fire_days_differential_3"])))
-    f.write("{},".format(int(params["fire_days_differential_4"])))
-    f.write("{},".format(int(params["fire_days_differential_5"])))
-    f.write("{},".format(int(params["fire_days_differential_6"])))
-    f.write("{},".format(int(params["fire_days_differential_7"])))
-    f.write("{}".format(int(params["fire_days_differential_8"])))
+    ks = [
+        "high_fuel_count",
+        "erc_1",
+        "erc_2",
+        "day_1",
+        "day_2",
+        "day_3",
+        "day_4",
+        "fire_ending_1",
+        "fire_ending_2",
+        "fire_ending_3",
+        "fire_ending_4",
+        "fire_ending_5",
+        "fire_ending_6",
+        "fire_ending_7",
+        "fire_ending_8"
+    ]
+    for k in ks:
+        f.write("{},".format(int(params[k])))
     f.write("\n")
 
 
