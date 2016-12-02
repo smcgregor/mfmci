@@ -293,7 +293,7 @@ def cross_origin_optimize():
         ['./smac/smac --use-instances false --numberOfRunsLimit ' + str(runs_limit) + ' --pcs-file smac.pcs --algo "' + args["python"] + ' smac.py -domain ' + domain_name + ' -count ' + str(count) + ' -horizon ' + str(horizon) + " -rewards_suppression " + str(rewards_suppression) + " -rewards_timber " + str(rewards_timber) + " -rewards_ecology " + str(rewards_ecology) + " -rewards_air " + str(rewards_air) + " -rewards_recreation " + str(rewards_recreation) + '" --run-objective QUALITY --rungroup ' + rungroup + ' --seed 1'],
         shell=True)
 
-    directory_listing = os.listdir("smac-output/optimizations/state-run1/")
+    directory_listing = os.listdir("smac-output/" + rungroup + "/state-run1/")
     out_file = ""
     for file_name in directory_listing:
         if file_name.find("paramstrings-it") == 0:
