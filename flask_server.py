@@ -299,7 +299,7 @@ def cross_origin_optimize():
         if file_name.find("paramstrings-it") == 0:
             out_file = file_name
             break
-    f = open("smac-output/optimizations/state-run1/" + out_file, "r")
+    f = open("smac-output/" + rungroup + "/state-run1/" + out_file, "r")
     last_line = ""
     for line in f:
         last_line = line
