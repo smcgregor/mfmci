@@ -12,181 +12,37 @@ def policy_factory(parameter_dictionary):
     erc_threshold = int(parameter_dictionary["ERC Threshold"])
     time_until_end_of_fire_season_threshold = int(parameter_dictionary["Days Until End of Season Threshold"])
 
-    params = {}
+    counts ={}
+
+    def split_value(name):
+        if name == "fire_ending":
+            return 0
+        else:
+            return int(parameter_dictionary[name+"_"+str(counts[name])])
+
+    def construct_tree(name_list):
+        counts[name_list[0]] += 1
+        name = name_list[0]
+        if len(name_list) > 1:
+            return {
+                "split": split_value(name),
+                "param_name": name,
+                "left": construct_tree(name_list[1:]),
+                "right": construct_tree(name_list[1:])
+            }
+        else:
+            if counts[name_list[0]] % 2 == 0:
+                return 1
+            else:
+                return 0
+
     if False:
-
-        params = {
-            "split": int(parameter_dictionary["high_fuel_count"]),
-            "param_name": "high_fuel_count",
-            "left": {
-                "split": int(parameter_dictionary["fire_size_differential_1"]),
-                "param_name": "fire_size_differential",
-                "left": {
-                    "split": int(parameter_dictionary["fire_suppression_cost_1"]),
-                    "param_name": "fire_suppression_cost",
-                    "left": {
-                        "split": int(parameter_dictionary["fire_days_differential_1"]),
-                        "param_name": "fire_days_differential",
-                        "left": 0,
-                        "right": 1
-                    },
-                    "right": {
-                        "split": int(parameter_dictionary["fire_days_differential_2"]),
-                        "param_name": "fire_days_differential",
-                        "left": 0,
-                        "right": 1
-                    }
-                },
-                "right": {
-                    "split": int(parameter_dictionary["fire_suppression_cost_2"]),
-                    "param_name": "fire_suppression_cost",
-                    "left": {
-                        "split": int(parameter_dictionary["fire_days_differential_3"]),
-                        "param_name": "fire_days_differential",
-                        "left": 0,
-                        "right": 1
-                    },
-                    "right": {
-                        "split": int(parameter_dictionary["fire_days_differential_4"]),
-                        "param_name": "fire_days_differential",
-                        "left": 0,
-                        "right": 1
-                    }
-                }
-            },
-            "right": {
-                "split": int(parameter_dictionary["fire_size_differential_2"]),
-                "param_name": "fire_size_differential",
-                "left": {
-                    "split": int(parameter_dictionary["fire_suppression_cost_3"]),
-                    "param_name": "fire_suppression_cost",
-                    "left": {
-                        "split": int(parameter_dictionary["fire_days_differential_5"]),
-                        "param_name": "fire_days_differential",
-                        "left": 0,
-                        "right": 1
-                    },
-                    "right": {
-                        "split": int(parameter_dictionary["fire_days_differential_6"]),
-                        "param_name": "fire_days_differential",
-                        "left": 0,
-                        "right": 1
-                    }
-                },
-                "right": {
-                    "split": int(parameter_dictionary["fire_suppression_cost_4"]),
-                    "param_name": "fire_suppression_cost",
-                    "left": {
-                        "split": int(parameter_dictionary["fire_days_differential_7"]),
-                        "param_name": "fire_days_differential",
-                        "left": 0,
-                        "right": 1
-                    },
-                    "right": {
-                        "split": int(parameter_dictionary["fire_days_differential_8"]),
-                        "param_name": "fire_days_differential",
-                        "left": 0,
-                        "right": 1
-                    }
-                }
-            }
-        }
-        #params["split"] = int(parameter_dictionary["high_fuel_count"])
-
-        #params["fire_days_differential_1"] = int(parameter_dictionary["fire_days_differential_1"])
-        #params["fire_days_differential_2"] = int(parameter_dictionary["fire_days_differential_2"])
-        #params["fire_days_differential_3"] = int(parameter_dictionary["fire_days_differential_3"])
-        #params["fire_days_differential_4"] = int(parameter_dictionary["fire_days_differential_4"])
-        #params["fire_days_differential_5"] = int(parameter_dictionary["fire_days_differential_5"])
-        #params["fire_days_differential_6"] = int(parameter_dictionary["fire_days_differential_6"])
-        #params["fire_days_differential_7"] = int(parameter_dictionary["fire_days_differential_7"])
-        #params["fire_days_differential_8"] = int(parameter_dictionary["fire_days_differential_8"])
-
-        #params["fire_suppression_cost_1"] = int(parameter_dictionary["fire_suppression_cost_1"])
-        #params["fire_suppression_cost_2"] = int(parameter_dictionary["fire_suppression_cost_2"])
-        #params["fire_suppression_cost_3"] = int(parameter_dictionary["fire_suppression_cost_3"])
-        #params["fire_suppression_cost_4"] = int(parameter_dictionary["fire_suppression_cost_4"])
-
-        #params["fire_size_differential_1"] = int(parameter_dictionary["fire_size_differential_1"])
-        #params["fire_size_differential_2"] = int(parameter_dictionary["fire_size_differential_2"])
-    elif "fire_ending_8" in parameter_dictionary.keys():
-
-        params = {
-            "split": int(parameter_dictionary["high_fuel_count"]),
-            "param_name": "high_fuel_count",
-            "left": {
-                "split": int(parameter_dictionary["erc_1"]),
-                "param_name": "erc",
-                "left": {
-                    "split": int(parameter_dictionary["day_1"]),
-                    "param_name": "day",
-                    "left": {
-                        "split": int(parameter_dictionary["fire_ending_1"]),
-                        "param_name": "fire_ending",
-                        "left": 0,
-                        "right": 1
-                    },
-                    "right": {
-                        "split": int(parameter_dictionary["fire_ending_2"]),
-                        "param_name": "fire_ending",
-                        "left": 0,
-                        "right": 1
-                    }
-                },
-                "right": {
-                    "split": int(parameter_dictionary["day_2"]),
-                    "param_name": "day",
-                    "left": {
-                        "split": int(parameter_dictionary["fire_ending_3"]),
-                        "param_name": "fire_ending",
-                        "left": 0,
-                        "right": 1
-                    },
-                    "right": {
-                        "split": int(parameter_dictionary["fire_ending_4"]),
-                        "param_name": "fire_ending",
-                        "left": 0,
-                        "right": 1
-                    }
-                }
-            },
-            "right": {
-                "split": int(parameter_dictionary["erc_2"]),
-                "param_name": "erc",
-                "left": {
-                    "split": int(parameter_dictionary["day_3"]),
-                    "param_name": "day",
-                    "left": {
-                        "split": int(parameter_dictionary["fire_ending_5"]),
-                        "param_name": "fire_ending",
-                        "left": 0,
-                        "right": 1
-                    },
-                    "right": {
-                        "split": int(parameter_dictionary["fire_ending_6"]),
-                        "param_name": "fire_ending",
-                        "left": 0,
-                        "right": 1
-                    }
-                },
-                "right": {
-                    "split": int(parameter_dictionary["day_4"]),
-                    "param_name": "day",
-                    "left": {
-                        "split": int(parameter_dictionary["fire_ending_7"]),
-                        "param_name": "fire_ending",
-                        "left": 0,
-                        "right": 1
-                    },
-                    "right": {
-                        "split": int(parameter_dictionary["fire_ending_8"]),
-                        "param_name": "fire_ending",
-                        "left": 0,
-                        "right": 1
-                    }
-                }
-            }
-        }
+        tree_policy_layers = ["high_fuel_count", "fire_size_differential", "fire_suppression_cost", "fire_days_differential"]
+    elif "day_8" in parameter_dictionary.keys():
+        tree_policy_layers = ["fire_ending", "high_fuel_count", "erc", "day"]
+    for name in tree_policy_layers:
+        counts[name] = 0
+    params = construct_tree(tree_policy_layers)
 
     def on_policy(transition_tuple=None):
         assert transition_tuple is not None
@@ -225,7 +81,7 @@ def policy_factory(parameter_dictionary):
         vals["fire_days_differential"] = int(result_letburn["endIndex"]) - int(result_suppress["endIndex"])
         vals["fire_ending"] = int(int(result_letburn["endIndex"]) - int(result_letburn["startIndex"]) < 8)
         vals["erc"] = int(additional_state["ERC"])
-        vals["day"] = int(additional_state["startIndex"])
+        vals["day"] = 180 - int(additional_state["startIndex"])
         assert(vals["fire_days_differential"] >= 0)
         return tree(vals, params)
 

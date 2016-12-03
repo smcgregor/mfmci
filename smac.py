@@ -82,22 +82,22 @@ with open("parameter_exploration" + reward_compontent + ".csv", "a") as f:
     f.write("{},".format(suppression_count))
     f.write("{},".format(total))
     ks = [
-        "high_fuel_count",
+        "high_fuel_count_1",
+        "high_fuel_count_2",
         "erc_1",
         "erc_2",
+        "erc_3",
+        "erc_4",
         "day_1",
         "day_2",
         "day_3",
         "day_4",
-        "fire_ending_1",
-        "fire_ending_2",
-        "fire_ending_3",
-        "fire_ending_4",
-        "fire_ending_5",
-        "fire_ending_6",
-        "fire_ending_7",
-        "fire_ending_8"
+        "day_5",
+        "day_6",
+        "day_7",
+        "day_8"
     ]
+
     for k in ks:
         f.write("{},".format(int(params[k])))
     f.write("\n")
