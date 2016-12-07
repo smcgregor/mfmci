@@ -290,7 +290,7 @@ def cross_origin_optimize():
 
     annotate_module.write_smac_parameters(request.args)
     subprocess.call(
-        ['./smac/smac --use-instances false --numberOfRunsLimit ' + str(runs_limit) + ' --pcs-file smac.pcs --algo "' + args["python"] + ' smac.py -domain ' + domain_name + ' -count ' + str(count) + ' -horizon ' + str(horizon) + " -rewards_suppression " + str(rewards_suppression) + " -rewards_timber " + str(rewards_timber) + " -rewards_ecology " + str(rewards_ecology) + " -rewards_air " + str(rewards_air) + " -rewards_recreation " + str(rewards_recreation) + '" --run-objective QUALITY --rungroup ' + rungroup + ' --seed 1'],
+        ['./smac/smac --use-instances false --config-tracking true --numberOfRunsLimit ' + str(runs_limit) + ' --pcs-file smac.pcs --algo "' + args["python"] + ' smac.py -domain ' + domain_name + ' -count ' + str(count) + ' -horizon ' + str(horizon) + " -rewards_suppression " + str(rewards_suppression) + " -rewards_timber " + str(rewards_timber) + " -rewards_ecology " + str(rewards_ecology) + " -rewards_air " + str(rewards_air) + " -rewards_recreation " + str(rewards_recreation) + '" --run-objective QUALITY --rungroup ' + rungroup + ' --seed 1'],
         shell=True)
 
     directory_listing = os.listdir("smac-output/" + rungroup + "/state-run1/")
