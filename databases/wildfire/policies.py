@@ -32,9 +32,9 @@ def policy_factory(parameter_dictionary):
             }
         else:
             if counts[name_list[0]] % 2 == 0:
-                return 1
+                return 1  # right branch
             else:
-                return 0
+                return 0  # left branch
 
     if False:
         tree_policy_layers = ["high_fuel_count", "fire_size_differential", "fire_suppression_cost", "fire_days_differential"]
@@ -81,7 +81,7 @@ def policy_factory(parameter_dictionary):
         vals["fire_days_differential"] = int(result_letburn["endIndex"]) - int(result_suppress["endIndex"])
         vals["fire_ending"] = int(int(result_letburn["endIndex"]) - int(result_letburn["startIndex"]) < 8)
         vals["erc"] = int(additional_state["ERC"])
-        vals["day"] = 180 - int(additional_state["startIndex"])
+        vals["day"] = min(180 - int(additional_state["startIndex"]), int(additional_state["startIndex"]))
         assert(vals["fire_days_differential"] >= 0)
         return tree(vals, params)
 
